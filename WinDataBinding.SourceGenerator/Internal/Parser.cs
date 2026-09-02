@@ -60,7 +60,7 @@ internal static class Parser
 
         var properties = binder.IsGenericType || sourceType.IsGenericType
             ? ImmutableArray<GeneratedProperty>.Empty
-            : Collect(sourceType, known, options, diagnostics, location, ct);
+            : Collect(binder, sourceType, known, options, diagnostics, location, ct).Properties;
 
         var ns = binder.ContainingNamespace.IsGlobalNamespace
             ? null
@@ -94,8 +94,14 @@ internal static class Parser
         ImmutableArray<string> Remarks,
         ImmutableArray<string> Descriptions)
     {
-        public static Path Root { get; } = new(
+        /// <summary>The source object the binder wraps.</summary>
+        public static Path Source { get; } = new(
             PropertyChain.Empty, "_source", "_source", ".", false,
+            ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
+
+        /// <summary>The binder itself, for flattening the properties it declares by hand.</summary>
+        public static Path This { get; } = new(
+            PropertyChain.Empty, "this", "this", ".", false,
             ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
 
         public Path Append(ISymbol member, ITypeSymbol memberType, KnownTypeSymbols known)
@@ -118,6 +124,12 @@ internal static class Parser
     /// </summary>
     private const string SiblingPlaceholder = "$sibling$";
 
+    /// <summary>
+    /// Chain segment for a converted value that would otherwise take the bare name of the property it came from.
+    /// It matches what a strongly typed ID calls its value, so the two read alike.
+    /// </summary>
+    private const string ValueSuffix = "Value";
+
     /// <param name="SiblingIndex">
     /// Index of the candidate whose resolved name replaces <see cref="SiblingPlaceholder"/> in <paramref name="Expression"/>, 
     /// or -1 when the expression stands alone.
@@ -132,16 +144,27 @@ internal static class Parser
         string? Description,
         int SiblingIndex = -1);
 
-    private static ImmutableArray<GeneratedProperty> Collect(
-        INamedTypeSymbol sourceType, KnownTypeSymbols known, GeneratorOptions options,
-        List<DiagnosticInfo> diagnostics, LocationInfo? location, CancellationToken ct)
+    /// <param name="outer">
+    /// Types already being traversed further up, when this binder is being flattened on behalf of one that contains it.
+    /// </param>
+    private static FlattenedBinder Collect(
+        INamedTypeSymbol binder, INamedTypeSymbol sourceType, KnownTypeSymbols known, GeneratorOptions options,
+        List<DiagnosticInfo> diagnostics, LocationInfo? location, CancellationToken ct,
+        ImmutableHashSet<INamedTypeSymbol>? outer = null)
     {
         var candidates = new List<Candidate>();
-        var visited = ImmutableHashSet.Create<INamedTypeSymbol>(SymbolEqualityComparer.Default, sourceType);
-        Walk(sourceType, Path.Root, visited, known, options, candidates, diagnostics, location, ct);
+        var seed = outer ?? ImmutableHashSet.Create<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+
+        Walk(sourceType, Path.Source, seed.Add(sourceType), known, options, candidates, diagnostics, location, ct);
+        var fromSource = candidates.Count;
+
+        // Properties the binder declares itself are flattened the same way, rooted at 'this' instead.
+        // Only what comes out of them is emitted: the property is already there, so re-exposing it under its own name
+        // would not compile, and a simple one has nothing to flatten at all.
+        Walk(binder, Path.This, seed.Add(binder), known, options, candidates, diagnostics, location, ct, bare: false);
 
         // Names are assigned only once every chain is known, first-come-first-served in declaration order.
-        var names = PropertyChain.GetPaths(candidates.ConvertAll(c => c.Chain));
+        var names = PropertyChain.GetPaths(candidates.ConvertAll(c => c.Chain), Reserved(binder));
 
         var properties = ImmutableArray.CreateBuilder<GeneratedProperty>(candidates.Count);
         for (var i = 0; i < candidates.Count; i++)
@@ -155,20 +178,20 @@ internal static class Parser
                 names[i],
                 candidate.Type,
                 expression,
-                StripSource(expression),
+                Strip(expression),
                 candidate.TypePre6,
                 candidate.ExpressionPre6,
-                candidate.ExpressionPre6 is null ? null : StripSource(candidate.ExpressionPre6),
+                candidate.ExpressionPre6 is null ? null : Strip(candidate.ExpressionPre6),
                 EquatableArray.Create(candidate.Remarks),
                 candidate.Description));
         }
-        return properties.MoveToImmutable();
+        return new FlattenedBinder(properties.MoveToImmutable(), fromSource);
     }
 
     private static void Walk(
         INamedTypeSymbol type, Path path, ImmutableHashSet<INamedTypeSymbol> visited, KnownTypeSymbols known,
         GeneratorOptions options, List<Candidate> candidates, List<DiagnosticInfo> diagnostics,
-        LocationInfo? location, CancellationToken ct, string? exclude = null)
+        LocationInfo? location, CancellationToken ct, string? exclude = null, bool bare = true)
     {
         foreach (var (member, memberType) in GetMembers(type))
         {
@@ -189,7 +212,7 @@ internal static class Parser
 
             if (known.IsSequence(underlying))
             {
-                candidates.Add(PassThrough(next, underlying));
+                if (bare) candidates.Add(PassThrough(next, underlying));
 
                 // A sequence of renderable elements also gets a rendered form, for a grid column.
                 var element = known.GetElementRenderer(underlying);
@@ -204,14 +227,15 @@ internal static class Parser
 
             if (underlying.TypeKind == TypeKind.Enum || KnownTypes.IsLeaf(name))
             {
-                candidates.Add(PassThrough(next, underlying));
+                if (bare) candidates.Add(PassThrough(next, underlying));
                 continue;
             }
 
             if (KnownTypes.TryGetConversions(name, out var conversions))
             {
+                // A conversion with no suffix of its own would take the bare name, which is spoken for here.
                 foreach (var conversion in conversions)
-                    candidates.Add(Convert(next, conversion));
+                    candidates.Add(Convert(next, conversion, bare ? null : ValueSuffix));
 
                 AddFormatted(next, renderer, candidates);
                 continue;
@@ -232,7 +256,7 @@ internal static class Parser
                 // so only what is statically there is reachable here.
                 var id = underlying as INamedTypeSymbol;
                 var walk = id is not null && !visited.Contains(id);
-                var alone = !walk || !HasMembersBesides(id!, binding.PropertyName);
+                var alone = bare && (!walk || !HasMembersBesides(id!, binding.PropertyName));
 
                 // Standing alone the value takes the bare name; sharing with members it takes a suffix.
                 var suffix = alone ? null : binding.PropertyName;
@@ -259,11 +283,65 @@ internal static class Parser
             }
 
             // The object itself binds too, before the members flattened out of it.
-            candidates.Add(PassThrough(next, underlying));
+            if (bare) candidates.Add(PassThrough(next, underlying));
             Walk(complex, next, visited.Add(complex), known, options, candidates, diagnostics, location, ct);
             AddFormatted(next, renderer, candidates);
+            AddNested(complex, next, visited, known, candidates, ct);
         }
     }
+
+    /// <summary>
+    /// What a nested binder flattens out of its own source object, read straight off its generated properties by name
+    /// rather than rebuilt from the graph behind them.
+    /// </summary>
+    /// <remarks>
+    /// That generated half is not in the compilation this transform sees — a generator never reads its own output —
+    /// but this is the code that writes it, so its names and types are known exactly. Only the source half is spliced
+    /// in: the members the nested binder declares by hand are real members, and walking it has bound them already.
+    /// </remarks>
+    private static void AddNested(
+        INamedTypeSymbol binder, Path path, ImmutableHashSet<INamedTypeSymbol> visited, KnownTypeSymbols known,
+        List<Candidate> candidates, CancellationToken ct)
+    {
+        if (!known.IsLocal(binder) || !known.TryGetBinder(binder, out var source, out var optionsType)) return;
+        if (binder.IsGenericType || source.IsGenericType) return;
+
+        if (!known.TryGetFlattened(binder, out var flattened))
+        {
+            // The nested binder reports its own diagnostics when it is generated; repeating them here would only
+            // duplicate them against a second location.
+            var ignored = new List<DiagnosticInfo>();
+            flattened = Collect(binder, source, known, GeneratorOptions.From(optionsType, known),
+                ignored, null, ct, visited.Add(binder));
+
+            // A branch pruned as circular was pruned because of where we came from, so that result is ours alone.
+            if (!ignored.Any(d => ReferenceEquals(d.Descriptor, Diagnostics.CircularReference)))
+                known.SetFlattened(binder, flattened);
+        }
+
+        for (var i = 0; i < flattened.FromSource; i++)
+        {
+            var property = flattened.Properties[i];
+            var expression = path.Safe + path.Accessor + property.Name;
+
+            candidates.Add(new Candidate(
+                path.Chain.Add(property.Name),
+                Lift(property.Type, path.Nullable),
+                expression,
+                property.TypePre6 is null ? null : Lift(property.TypePre6, path.Nullable),
+                property.TypePre6 is null ? null : expression,
+                path.Remarks.AddRange(property.Remarks),
+                Join(Description(path.Descriptions, null), property.Description)));
+        }
+    }
+
+    /// <summary>Makes a type nullable when the chain reaching it can be.</summary>
+    private static string Lift(string type, bool nullable) =>
+        nullable && !type.EndsWith("?", StringComparison.Ordinal) ? type + "?" : type;
+
+    /// <summary>Joins two descriptions the way one chain of summaries is joined.</summary>
+    private static string? Join(string? left, string? right) =>
+        left is null ? right : right is null ? left : left + ": " + right;
 
     private static bool HasMembersBesides(INamedTypeSymbol type, string exclude)
     {
@@ -400,20 +478,22 @@ internal static class Parser
         Description(path.Descriptions, "Array"),
         displayIndex);
 
-    private static Candidate Convert(Path path, Conversion conversion)
+    /// <param name="fallback">Chain segment for a conversion that has none of its own, or null to leave it bare.</param>
+    private static Candidate Convert(Path path, Conversion conversion, string? fallback = null)
     {
         var context = new ExprContext(path.Safe, path.Unchecked, path.Accessor, path.Nullable);
         var nullable = conversion.IsReference || conversion.ForceNullable || path.Nullable;
-        var suffix = nullable ? "?" : "";
+        var annotation = nullable ? "?" : "";
+        var segment = conversion.Suffix ?? fallback;
 
         return new Candidate(
-            conversion.Suffix is null ? path.Chain : path.Chain.Add(conversion.Suffix),
-            conversion.Type + suffix,
+            segment is null ? path.Chain : path.Chain.Add(segment),
+            conversion.Type + annotation,
             conversion.Build(context),
-            conversion.TypePre6 is null ? null : conversion.TypePre6 + suffix,
+            conversion.TypePre6 is null ? null : conversion.TypePre6 + annotation,
             conversion.BuildPre6?.Invoke(context),
             path.Remarks,
-            Description(path.Descriptions, conversion.Suffix));
+            Description(path.Descriptions, segment));
     }
 
     // -- helpers --------------------------------------------------------------------------------
@@ -424,7 +504,26 @@ internal static class Parser
     private static bool IsNullableValue(ITypeSymbol type) =>
         type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
 
-    private static string StripSource(string expression) => expression.Replace("_source.", "");
+    /// <summary>Drops the root from an expression, leaving the chain the summary comment shows.</summary>
+    private static string Strip(string expression) =>
+        expression.Replace("_source.", "").Replace("this.", "");
+
+    /// <summary>
+    /// Names the generated code cannot take: what the binder declares by hand, and what it always emits.
+    /// A generated property sharing either would be a duplicate member rather than a shadowed one.
+    /// </summary>
+    private static IEnumerable<string> Reserved(INamedTypeSymbol binder)
+    {
+        yield return "_source";
+        yield return "Create";
+        yield return "Equals";
+        yield return "GetHashCode";
+        yield return "CompareTo";
+
+        foreach (var member in binder.GetMembers())
+            if (!member.IsImplicitlyDeclared)
+                yield return member.Name;
+    }
 
     /// <summary>Joins the doc summaries along the chain with ": ", appending the member suffix for multi-property types.</summary>
     private static string? Description(ImmutableArray<string> descriptions, string? suffix)

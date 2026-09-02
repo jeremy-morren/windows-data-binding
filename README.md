@@ -210,6 +210,96 @@ The binder also mirrors how the source compares:
 binder would fall back to `ValueType.Equals`, which compares a struct holding a reference field by
 reflection, and the two notions of equality could disagree.
 
+## Properties you declare yourself
+
+Anything the binder's own half of the `partial` declares is flattened too, exactly as a property of the
+source would be, rooted at `this` instead of `_source`:
+
+```csharp
+[GenerateWindowsBindingModel(typeof(Person))]
+public sealed partial class PersonModelBinder
+{
+    /// <summary>The vehicle being driven</summary>
+    public Vehicle? Current { get; set; }
+
+    public OrderId? Order { get; set; }
+
+    public Duration? Elapsed { get; set; }
+
+    public bool IsSelected { get; set; }
+}
+```
+
+```csharp
+/// <summary><c>Current?.Speed</c></summary>
+/// <remarks><see cref="Demo.PersonModelBinder.Current"/> <see cref="Demo.Vehicle.Speed"/></remarks>
+[global::System.ComponentModel.Description("The vehicle being driven")]
+public int? Current_Speed => this.Current?.Speed;
+
+public global::System.Guid? Order_Value => this.Order?.Value;
+
+public string? Order_Value_Formatted => ((global::System.IFormattable)this.Order?.Value)?.ToString(null, null);
+
+public global::System.TimeSpan? Elapsed_Value => this.Elapsed?.ToTimeSpan();
+```
+
+Two rules differ from the source object:
+
+- **The property's own name is never re-emitted.** It is already declared, so a second member under the same
+  name would not compile. `Current` stays exactly as you wrote it, and only what comes out of it is
+  generated.
+- **A simple property is ignored entirely.** `bool`, `bool?`, `string`, `int`, an enum, a `DateTime` — there
+  is nothing to flatten, and the property already binds as it stands.
+
+A converted value that would otherwise have taken the bare name gets a `_Value` segment instead, so nothing
+is lost: a `Duration` becomes `Elapsed_Value` (a `TimeSpan`), and a strongly typed ID becomes `Order_Value`.
+A conversion that names its own properties is unaffected — `TimeZoneInfo` still yields `_Id` and
+`_DisplayName`.
+
+Names you declare by hand always win. A generated property that would collide with one widens its separator
+just as it would against another generated property, so a source `Rank` alongside a declared `Rank` becomes
+`Rank_`.
+
+## Nested binders
+
+A property whose type is itself marked `[GenerateWindowsBindingModel]` is flattened through *what that binder
+generates*, not through the object graph behind it:
+
+```csharp
+public class Address
+{
+    public string Street { get; set; }
+    public Instant Created { get; set; }
+}
+
+[GenerateWindowsBindingModel(typeof(Address))]
+public sealed partial class AddressBinder { }
+
+public class Person { public AddressBinder Home { get; set; } }
+
+[GenerateWindowsBindingModel(typeof(Person))]
+public sealed partial class PersonBinder { }
+```
+
+```csharp
+public global::Demo.AddressBinder? Home           => _source.Home;
+public string?                     Home_Street    => _source.Home?.Street;
+public global::System.DateTime?    Home_Created   => _source.Home?.Created;
+```
+
+Note `Home_Created`: `AddressBinder.Created` is already a `DateTime`, so it is simply read. Re-deriving it
+from the graph would have produced `_source.Home?.Created.ToDateTimeUtc()`, which does not compile — the
+`Instant` is behind the nested binder, not in front of it.
+
+Those flattened members are not in the compilation the generator reads: a generator never sees its own
+output, its own earlier files included. They are known anyway, because the same logic that will write them
+runs here to work out their names and types. The nesting goes as deep as you take it, and two binders that
+point at each other terminate with `WGD001` rather than looping.
+
+Whatever the nested binder declares by hand is an ordinary member of it and binds by the usual rules, so
+`AddressBinder`'s own `bool IsPrimary` becomes `Home_IsPrimary`. A binder from a *referenced* assembly is
+already compiled, generated half and all, so it is walked as any other object would be.
+
 ## Types
 
 A property is either *simple* — bound directly, with the object never traversed — or an *object graph*, which

@@ -19,11 +19,17 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
 {
     private const string StrongIdAttribute = "StronglyTypedIds.StronglyTypedIdAttribute";
     private const string StrongIdTemplate = "StronglyTypedIds.Template";
+    private const string BinderAttribute = "WinDataBinding.GenerateWindowsBindingModelAttribute";
 
     private readonly Dictionary<ISymbol, TypeTraits> _traits = new(SymbolEqualityComparer.Default);
     private readonly Dictionary<ISymbol, StrongId> _strongIds = new(SymbolEqualityComparer.Default);
 
     private readonly Dictionary<string, INamedTypeSymbol?> _resolved = new(StringComparer.Ordinal);
+
+    private readonly Dictionary<ISymbol, (INamedTypeSymbol? Source, INamedTypeSymbol? Options)> _binders =
+        new(SymbolEqualityComparer.Default);
+
+    private readonly Dictionary<ISymbol, FlattenedBinder> _flattened = new(SymbolEqualityComparer.Default);
 
     public Compilation Compilation => compilation;
 
@@ -61,6 +67,51 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Whether the type is declared in the compilation being generated for rather than referenced from elsewhere.
+    /// A binder in a referenced assembly is already compiled, generated half and all, so its flattened properties
+    /// are ordinary members there and bind as any other member would.
+    /// </summary>
+    public bool IsLocal(ITypeSymbol type) =>
+        SymbolEqualityComparer.Default.Equals(type.ContainingAssembly, compilation.Assembly);
+
+    /// <summary>
+    /// The type a binder flattens and the options type it was given, when the type is a binder at all.
+    /// </summary>
+    public bool TryGetBinder(ITypeSymbol type, out INamedTypeSymbol source, out INamedTypeSymbol? options)
+    {
+        if (!_binders.TryGetValue(type, out var target))
+        {
+            target = ComputeBinder(type);
+            _binders[type] = target;
+        }
+
+        source = target.Source!;
+        options = target.Options;
+        return target.Source is not null;
+    }
+
+    /// <summary>What a nested binder flattens, worked out once and reused wherever else it appears.</summary>
+    public bool TryGetFlattened(ISymbol binder, out FlattenedBinder flattened) =>
+        _flattened.TryGetValue(binder, out flattened);
+
+    public void SetFlattened(ISymbol binder, FlattenedBinder flattened) => _flattened[binder] = flattened;
+
+    private static (INamedTypeSymbol? Source, INamedTypeSymbol? Options) ComputeBinder(ITypeSymbol type)
+    {
+        foreach (var attribute in type.GetAttributes())
+        {
+            if (attribute.AttributeClass?.ToDisplayString(Formats.Match) != BinderAttribute) continue;
+
+            var arguments = attribute.ConstructorArguments;
+            if (arguments.Length is not (1 or 2) || arguments[0].Value is not INamedTypeSymbol source) continue;
+
+            return (source, arguments.Length == 2 ? arguments[1].Value as INamedTypeSymbol : null);
+        }
+
+        return (null, null);
     }
 
     /// <summary>Whether the type is a sequence, which is bound as-is rather than traversed.</summary>

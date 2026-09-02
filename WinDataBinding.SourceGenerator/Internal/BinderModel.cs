@@ -1,4 +1,16 @@
+using System.Collections.Immutable;
+
 namespace WinDataBinding.SourceGenerator.Internal;
+
+/// <summary>
+/// What one binder flattens, in the order it emits: the properties drawn from its source object first, then those
+/// drawn from the properties it declares by hand.
+/// </summary>
+/// <param name="FromSource">
+/// How many of <paramref name="Properties"/> came from the source object. A binder nested inside another already
+/// binds the declared half through its own members, so only this half is spliced in.
+/// </param>
+internal readonly record struct FlattenedBinder(ImmutableArray<GeneratedProperty> Properties, int FromSource);
 
 /// <summary>
 /// One generated property. When <see cref="TypePre6"/> is set the property is emitted twice, 

@@ -44,9 +44,18 @@ internal sealed class PropertyChain : IEquatable<PropertyChain>
         GetPaths(chains)[index];
 
     /// <summary>Generates every property name in one pass. See <see cref="GetPath"/> for the rules.</summary>
-    public static ImmutableArray<string> GetPaths(IReadOnlyList<PropertyChain> chains)
+    /// <param name="reserved">
+    /// Names already spoken for by hand-written members of the binder, which a generated property widens away from
+    /// exactly as it would from another generated one. Declaring the name wins: nothing generated can share a class
+    /// with it and still compile.
+    /// </param>
+    public static ImmutableArray<string> GetPaths(
+        IReadOnlyList<PropertyChain> chains, IEnumerable<string>? reserved = null)
     {
         var taken = new HashSet<string>(StringComparer.Ordinal);
+        if (reserved is not null)
+            foreach (var name in reserved)
+                taken.Add(name);
         var paths = ImmutableArray.CreateBuilder<string>(chains.Count);
         foreach (var chain in chains)
         {
