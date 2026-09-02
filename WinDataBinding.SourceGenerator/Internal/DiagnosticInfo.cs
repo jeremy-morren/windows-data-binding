@@ -53,6 +53,13 @@ internal static class Diagnostics
         "Type '{0}' is generic; [GenerateWindowsBindingModel] supports neither generic binding model classes nor generic source types",
         Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
+    public static readonly DiagnosticDescriptor CustomStrongIdTemplate = new(
+        "WGD005",
+        "Custom strong ID templates are not supported",
+        "Property '{0}' is skipped because strongly typed ID '{1}' does not use a built-in template; "
+        + "custom strong ID templates are currently not supported",
+        Category, DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
     public static readonly DiagnosticDescriptor ContainingTypeNotPartial = new(
         "WGD004",
         "Containing type must be partial",

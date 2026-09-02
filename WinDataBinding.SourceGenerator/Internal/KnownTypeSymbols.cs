@@ -5,8 +5,8 @@ namespace WinDataBinding.SourceGenerator.Internal;
 /// <summary>
 /// Types resolved from the compilation once and reused for a whole traversal, following the approach
 /// <c>System.Text.Json</c>'s generator takes with its own <c>KnownTypeSymbols</c>. Classifying a member means
-/// walking <see cref="ITypeSymbol.AllInterfaces"/>, which is the expensive part of the traversal and repeats
-/// constantly in a deep graph, so the answers are memoised per type.
+/// walking <see cref="ITypeSymbol.AllInterfaces"/> or its attributes, which is the expensive part of the
+/// traversal and repeats constantly in a deep graph, so the answers are memoised per type.
 /// </summary>
 /// <remarks>
 /// These symbols never enter a pipeline model: an instance is created inside the transform, never escapes it,
@@ -16,6 +16,9 @@ namespace WinDataBinding.SourceGenerator.Internal;
 /// </remarks>
 internal sealed class KnownTypeSymbols(Compilation compilation)
 {
+    private const string StrongIdAttribute = "StronglyTypedIds.StronglyTypedIdAttribute";
+    private const string StrongIdTemplate = "StronglyTypedIds.Template";
+
     [Flags]
     private enum Traits
     {
@@ -26,9 +29,12 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     }
 
     private readonly Dictionary<ISymbol, Traits> _traits = new(SymbolEqualityComparer.Default);
+    private readonly Dictionary<ISymbol, StrongId> _strongIds = new(SymbolEqualityComparer.Default);
 
     private INamedTypeSymbol? _formattable;
     private bool _formattableResolved;
+
+    public Compilation Compilation => compilation;
 
     /// <summary><c>System.IFormattable</c>, resolved lazily and only once.</summary>
     private INamedTypeSymbol? Formattable
@@ -46,21 +52,31 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     }
 
     /// <summary>Whether the type is a sequence, which is bound as-is rather than traversed.</summary>
-    public bool IsSequence(ITypeSymbol type) => Get(type).HasFlag(Traits.Sequence);
+    public bool IsSequence(ITypeSymbol type) => Traits_(type).HasFlag(Traits.Sequence);
 
     /// <summary>Whether the type is a sequence whose elements can be rendered as text.</summary>
-    public bool IsFormattableSequence(ITypeSymbol type) => Get(type).HasFlag(Traits.FormattableSequence);
+    public bool IsFormattableSequence(ITypeSymbol type) => Traits_(type).HasFlag(Traits.FormattableSequence);
 
-    private Traits Get(ITypeSymbol type)
+    /// <summary>Whether the type is a strongly typed ID, and if so which template declared it.</summary>
+    public StrongId GetStrongId(ITypeSymbol type)
+    {
+        if (_strongIds.TryGetValue(type, out var cached)) return cached;
+
+        var strongId = ComputeStrongId(type);
+        _strongIds[type] = strongId;
+        return strongId;
+    }
+
+    private Traits Traits_(ITypeSymbol type)
     {
         if (_traits.TryGetValue(type, out var cached)) return cached;
 
-        var traits = Compute(type);
+        var traits = ComputeTraits(type);
         _traits[type] = traits;
         return traits;
     }
 
-    private Traits Compute(ITypeSymbol type)
+    private Traits ComputeTraits(ITypeSymbol type)
     {
         // string is IEnumerable<char>, but it binds as a leaf.
         if (type.SpecialType == SpecialType.System_String) return Traits.Computed;
@@ -72,6 +88,37 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
             traits |= Traits.FormattableSequence;
 
         return traits;
+    }
+
+    private static StrongId ComputeStrongId(ITypeSymbol type)
+    {
+        foreach (var attribute in type.GetAttributes())
+        {
+            if (attribute.AttributeClass?.ToDisplayString(Formats.Match) != StrongIdAttribute) continue;
+
+            // A built-in template is an enum argument; anything else names a custom template.
+            if (attribute.ConstructorArguments.Length > 0 &&
+                attribute.ConstructorArguments[0] is { Kind: TypedConstantKind.Enum } argument &&
+                argument.Type?.ToDisplayString(Formats.Match) == StrongIdTemplate &&
+                TemplateName(argument) is { } template)
+                return new StrongId(StrongIdKind.Template, template);
+
+            return StrongId.Custom;
+        }
+
+        return StrongId.None;
+    }
+
+    /// <summary>The enum member's name, which is what the template table is keyed by.</summary>
+    private static string? TemplateName(TypedConstant argument)
+    {
+        if (argument.Type is not INamedTypeSymbol enumType) return null;
+
+        foreach (var member in enumType.GetMembers())
+            if (member is IFieldSymbol { HasConstantValue: true } field && Equals(field.ConstantValue, argument.Value))
+                return field.Name;
+
+        return null;
     }
 
     /// <summary>The <c>T</c> of the sequence, or null when the type is not one.</summary>

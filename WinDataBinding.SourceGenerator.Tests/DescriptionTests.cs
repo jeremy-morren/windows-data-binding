@@ -79,6 +79,76 @@ public class DescriptionTests
     }
 
     [Fact]
+    public void Follows_inheritdoc_to_the_inherited_summary()
+    {
+        var source = TestSources.Wrap("""
+            public interface INamed
+            {
+                /// <summary>Name from the interface</summary>
+                string Name { get; }
+            }
+
+            public abstract class Base
+            {
+                /// <summary>Total from the base</summary>
+                public abstract int Total { get; }
+            }
+
+            public class Model : Base, INamed
+            {
+                /// <inheritdoc/>
+                public string Name { get; set; }
+
+                /// <inheritdoc/>
+                public override int Total => 0;
+
+                /// <inheritdoc cref="INamed.Name"/>
+                public string Alias { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain("""[global::System.ComponentModel.Description("Name from the interface")]""");
+        result.Source.Should().Contain("""[global::System.ComponentModel.Description("Total from the base")]""");
+    }
+
+    [Fact]
+    public void Follows_a_chain_of_inheritdoc_without_looping()
+    {
+        var source = TestSources.Wrap("""
+            public interface IRoot
+            {
+                /// <summary>The original text</summary>
+                string Label { get; }
+            }
+
+            public interface IMiddle : IRoot
+            {
+                /// <inheritdoc/>
+                new string Label { get; }
+            }
+
+            public class Model : IMiddle
+            {
+                /// <inheritdoc/>
+                public string Label { get; set; }
+
+                /// <inheritdoc/>
+                public int Orphan { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain("""[global::System.ComponentModel.Description("The original text")]""");
+
+        // Orphan inherits from nothing, so it contributes no description rather than hanging.
+        result.Source.Should().Contain("public int Orphan => _source.Orphan;");
+        result.Source.Should().NotContain("""Description("")""");
+    }
+
+    [Fact]
     public void Escapes_a_quote_in_a_summary_when_writing_the_attribute()
     {
         var source = TestSources.Wrap("""

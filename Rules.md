@@ -59,3 +59,27 @@ See README.md for a rough overview. Note the following rules:
 	public DateTime PropertyName => _source.PropertyName.ToDateTimeUnspecified();
 #endif
 ```
+
+Strong IDs
+
+[Strong ids](https://github.com/andrewlock/StronglyTypedId) support:
+
+For template types (i.e. a struct that is annotated with [StrongId(Template.Int)]) (4 templates), that underlying .Value should be returned, no further inspection.
+
+For custom types (i.e. no Template): emit a diagnostic 'Custom strong IDs templates are currently not supported'.
+
+The declaration of the type will be this:
+
+```csharp
+
+[StronglyTypedId(TemplateId.Guid)]
+public readonly partial struct CustomId;
+
+```
+
+(Update readme)
+If a property (non-enumerable) is encountered that implements IFormattable (other than primitive types):
+
+Also create property _Formatted (always string?, do not assume output is non-null): that does ((IFormattable)Property).ToString(null, null);
+
+_Formattated should be last property with same collision i.e. if type has a member called Formatted, our custom one becomes __Formatted.

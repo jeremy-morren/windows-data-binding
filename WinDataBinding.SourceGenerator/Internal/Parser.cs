@@ -14,20 +14,6 @@ namespace WinDataBinding.SourceGenerator.Internal;
 /// </summary>
 internal static class Parser
 {
-    /// <summary>Fully qualified, with <c>global::</c> and language keywords, for emitted type names.</summary>
-    private static readonly SymbolDisplayFormat TypeFormat = SymbolDisplayFormat.FullyQualifiedFormat;
-
-    /// <summary>Namespace-qualified without <c>global::</c>, for XML doc <c>cref</c>s.</summary>
-    private static readonly SymbolDisplayFormat CrefFormat = new(
-        globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
-        typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces);
-
-    /// <summary>Namespace-qualified, generics dropped, for matching against the known-type tables.</summary>
-    private static readonly SymbolDisplayFormat MatchFormat = new(
-        globalNamespaceStyle: SymbolDisplayGlobalNamespaceStyle.Omitted,
-        typeQualificationStyle: SymbolDisplayTypeQualificationStyle.NameAndContainingTypesAndNamespaces,
-        genericsOptions: SymbolDisplayGenericsOptions.None);
-
     public static BinderModel? Parse(GeneratorAttributeSyntaxContext context, CancellationToken ct)
     {
         if (context.TargetSymbol is not INamedTypeSymbol binder ||
@@ -69,13 +55,13 @@ internal static class Parser
 
         var ns = binder.ContainingNamespace.IsGlobalNamespace
             ? null
-            : binder.ContainingNamespace.ToDisplayString(CrefFormat);
+            : binder.ContainingNamespace.ToDisplayString(Formats.Cref);
 
         return new BinderModel(
             ns,
             EquatableArray.Create(containingTypes),
             binder.Name,
-            sourceType.ToDisplayString(TypeFormat),
+            sourceType.ToDisplayString(Formats.Type),
             Accessibility(sourceType.DeclaredAccessibility),
             HintName(ns, containingTypes, binder.Name),
             new EquatableArray<GeneratedProperty>(properties),
@@ -98,7 +84,7 @@ internal static class Parser
             PropertyChain.Empty, "_source", "_source", ".", false,
             ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
 
-        public Path Append(ISymbol member, ITypeSymbol memberType)
+        public Path Append(ISymbol member, ITypeSymbol memberType, KnownTypeSymbols known)
         {
             // A link needs a null-conditional accessor after it when it can itself be null; _source never can.
             var lifted = memberType.IsReferenceType || IsNullableValue(memberType);
@@ -108,8 +94,8 @@ internal static class Parser
                 Unchecked + "." + member.Name,
                 lifted ? "?." : ".",
                 Nullable || lifted,
-                Remarks.Add(member.ContainingType.ToDisplayString(CrefFormat) + "." + member.Name),
-                Descriptions.Add(Summary(member)));
+                Remarks.Add(member.ContainingType.ToDisplayString(Formats.Cref) + "." + member.Name),
+                Descriptions.Add(Summary(member, known)));
         }
     }
 
@@ -173,9 +159,9 @@ internal static class Parser
         {
             ct.ThrowIfCancellationRequested();
 
-            var next = path.Append(member, memberType);
+            var next = path.Append(member, memberType, known);
             var underlying = Unwrap(memberType);
-            var name = underlying.ToDisplayString(MatchFormat);
+            var name = underlying.ToDisplayString(Formats.Match);
 
             if (known.IsSequence(underlying))
             {
@@ -201,6 +187,17 @@ internal static class Parser
             {
                 foreach (var conversion in conversions)
                     candidates.Add(Convert(next, conversion));
+                continue;
+            }
+
+            var strongId = known.GetStrongId(underlying);
+            if (strongId.Kind != StrongIdKind.None)
+            {
+                if (strongId.Template is { } template && KnownTypes.TryGetStrongIdTemplate(template, out var unwrap))
+                    candidates.Add(Convert(next, unwrap));
+                else
+                    diagnostics.Add(DiagnosticInfo.Create(Diagnostics.CustomStrongIdTemplate,
+                        location, next.Chain.ToString(), underlying.Name));
                 continue;
             }
 
@@ -253,7 +250,7 @@ internal static class Parser
         var nullable = underlying.IsReferenceType || path.Nullable;
         return new Candidate(
             path.Chain,
-            underlying.ToDisplayString(TypeFormat) + (nullable ? "?" : ""),
+            underlying.ToDisplayString(Formats.Type) + (nullable ? "?" : ""),
             path.Safe,
             null,
             null,
@@ -321,23 +318,74 @@ internal static class Parser
         return suffix is null ? text : text + " (" + suffix + ")";
     }
 
-    /// <summary>Reads the summary element of a member's XML doc comment, collapsed to a single line.</summary>
-    private static string Summary(ISymbol member)
+    /// <summary>
+    /// Reads a member's summary as a documentation viewer would show it: inner text only, entities decoded,
+    /// whitespace collapsed. An <c>&lt;inheritdoc/&gt;</c> is followed to whatever it inherits from, repeatedly.
+    /// </summary>
+    private static string Summary(ISymbol member, KnownTypeSymbols known)
     {
-        var xml = member.GetDocumentationCommentXml();
-        if (string.IsNullOrWhiteSpace(xml)) return "";
+        var visited = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
 
-        string? text;
-        try
+        for (ISymbol? current = member; current is not null && visited.Add(current);)
         {
-            text = XDocument.Parse(xml).Root?.Element("summary")?.Value;
-        }
-        catch (System.Xml.XmlException)
-        {
-            return "";
-        }
-        if (text is null) return "";
+            var xml = current.GetDocumentationCommentXml();
+            if (string.IsNullOrWhiteSpace(xml)) return "";
 
+            XElement? root;
+            try
+            {
+                root = XDocument.Parse(xml).Root;
+            }
+            catch (System.Xml.XmlException)
+            {
+                return "";
+            }
+
+            if (root is null) return "";
+            if (root.Element("summary") is { } summary) return Collapse(summary.Value);
+            if (root.Element("inheritdoc") is not { } inherited) return "";
+
+            current = Inherited(current, inherited.Attribute("cref")?.Value, known);
+        }
+
+        return "";
+    }
+
+    /// <summary>What an <c>&lt;inheritdoc/&gt;</c> on this member points at.</summary>
+    private static ISymbol? Inherited(ISymbol member, string? cref, KnownTypeSymbols known)
+    {
+        if (cref is not null)
+            return DocumentationCommentId.GetFirstSymbolForDeclarationId(cref, known.Compilation)
+                ?? DocumentationCommentId.GetFirstSymbolForReferenceId(cref, known.Compilation);
+
+        // An override inherits from what it overrides, a type from its base.
+        switch (member)
+        {
+            case IPropertySymbol { OverriddenProperty: { } property }: return property;
+            case IMethodSymbol { OverriddenMethod: { } method }: return method;
+            case INamedTypeSymbol { BaseType: { } baseType }: return baseType;
+        }
+
+        if (member.ContainingType is not { } containing) return null;
+
+        // Otherwise it inherits from the interface member it implements.
+        foreach (var @interface in containing.AllInterfaces)
+            foreach (var candidate in @interface.GetMembers(member.Name))
+                if (SymbolEqualityComparer.Default.Equals(
+                        containing.FindImplementationForInterfaceMember(candidate), member))
+                    return candidate;
+
+        // A 'new' member hides rather than implements, so nothing claims it; match on name instead.
+        foreach (var @interface in containing.AllInterfaces)
+            foreach (var candidate in @interface.GetMembers(member.Name))
+                if (!SymbolEqualityComparer.Default.Equals(candidate, member))
+                    return candidate;
+
+        return null;
+    }
+
+    private static string Collapse(string text)
+    {
         var builder = new StringBuilder(text.Length);
         foreach (var word in text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
         {

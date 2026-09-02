@@ -9,3 +9,4 @@ WGD001 | WinDataBinding | Warning | Circular reference skipped
 WGD002 | WinDataBinding | Error | Binding model class must be partial
 WGD003 | WinDataBinding | Error | Generic types are not supported
 WGD004 | WinDataBinding | Error | Containing type must be partial
+WGD005 | WinDataBinding | Warning | Custom strong ID templates are not supported

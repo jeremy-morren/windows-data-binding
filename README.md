@@ -127,7 +127,9 @@ summary is reduced to its displayed form — the same text a documentation viewe
 
 - only the XML inner text is kept, and attributes are ignored;
 - entities are decoded, so `&gt;` becomes `>` and `&amp;` becomes `&`;
-- whitespace is collapsed, so a summary spread over several lines becomes one.
+- whitespace is collapsed, so a summary spread over several lines becomes one;
+- `<inheritdoc/>` is followed to whatever the member inherits from — an override's base member, the interface
+  member it implements, or an explicit `cref` — repeatedly, until a real summary turns up.
 
 ```csharp
 public class Order
@@ -175,6 +177,39 @@ Anything inheriting from `IEnumerable<>` (except `string`) will be returned as i
 Anything inheriting from `IEnumerable<T>` where `T` is `IFormattable` will have 2 additional properties (both `string?`):
 - `Property_Display` - `string.Join(", ", Property.Select(x => ((IFormattable)x).ToString(null, null)))`
 - `Property_Array`- `Property_Display is { } display ? $"[{display}]" : null`
+
+#### Strongly typed IDs
+
+A [strongly typed ID](https://github.com/andrewlock/StronglyTypedId) declared with one of the four built-in
+templates binds to its underlying value, with no further inspection:
+
+| Template | Output property |
+|:-|:-|
+| `Template.Guid` | `Guid`: `Value` |
+| `Template.Int` | `int`: `Value` |
+| `Template.Long` | `long`: `Value` |
+| `Template.String` | `string`: `Value` |
+
+```csharp
+[StronglyTypedId(Template.Guid)]
+public readonly partial struct OrderId;
+
+public class Model { public OrderId Order { get; set; } }
+```
+
+gives
+
+```csharp
+/// <summary><c>Order.Value</c></summary>
+/// <remarks><see cref="Demo.Model.Order"/></remarks>
+public global::System.Guid Order => _source.Order.Value;
+```
+
+The underlying type comes from the template, not from the struct's own `Value` member: that member is written
+by StronglyTypedId's own source generator, and generators cannot see each other's output.
+
+A custom template (`[StronglyTypedId("my-guid")]`) is not supported — the property is skipped and `WGD005` is
+reported. A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
 
 #### Common types:
 
