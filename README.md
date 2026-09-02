@@ -47,13 +47,14 @@ public class Person
 ```
 
 The generated source will look like this. Every type is fully qualified so the generated code cannot be
-broken by a name in your own project, and the `[Description]` text is the doc comments of each property in
-the chain joined by `: `:
+broken by a name in your own project, the `[Description]` text is the doc comments of each property in the
+chain joined by `: `, and `[GeneratedCode]` carries the generator's full package version, prerelease suffix
+included, so a generated file always says which build wrote it:
 
 ```csharp
 namespace Demo
 {
-    [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0-beta01")]
     partial class PersonModelBinder
     {
         private readonly global::Demo.Person _source;
@@ -340,6 +341,20 @@ already compiled, generated half and all, so it is walked as any other object wo
 A property is either *simple* — bound directly, with the object never traversed — or an *object graph*, which
 is flattened. Value types, enums, collections, strongly typed IDs, `JsonNode` and `JsonElement` are all simple.
 
+The `<remarks>` cref names the type each member is declared on. A cref lives in an XML attribute, where an
+angle bracket is illegal, so a generic is written with braces around its type *parameters* —
+`<see cref="Demo.Base{T}.Current"/>`. The parameters rather than the arguments: a cref's type arguments have
+to be simple names, so the constructed `Base{Demo.Reading}` is rejected as malformed (CS1584) while `Base{T}`
+always binds.
+
+A source type may be generic as long as its type arguments are supplied — `typeof(Base<Reading>)` on the
+attribute, or a `sealed class Inherited : Base<Reading>` whose base carries the members. Substitution has
+already happened by the time the traversal sees them, so a `T` declared on the base arrives as `Reading` and
+every rule that turns on a type lands on the substituted one: `IReadOnlyList<T>` counts and renders as
+`IReadOnlyList<Reading>`, a `T` of `Instant` converts, a `T` of `int` binds as a leaf. Only `typeof(Base<>)`
+is rejected, with `WGD003`: nothing has been substituted, so there is nothing to flatten. The binding model
+type itself may never be generic.
+
 ### Simple types:
 
 #### Common
@@ -407,7 +422,12 @@ additional properties (both `string?`):
 - `Property_Array`- `Property_Display is { } display ? $"[{display}]" : null`
 
 Strings are already their own display text, so a sequence of them is joined as it stands rather than
-projected first: `string.Join(", ", Property)`.
+projected first: `string.Join(", ", Property)`. Enum elements are named with the plain `ToString()`:
+`Enum.ToString(string, IFormatProvider)` is obsolete — it ignores the provider — and gives identical text.
+
+An element that can be null is rendered through `?.`, so `IEnumerable<T?>` and a sequence of a reference
+type both work: `Nullable<T>` implements nothing itself, so the renderer is chosen from the `T` it wraps, and
+the null that comes back joins as an empty entry rather than throwing.
 
 Anything inheriting from `IReadOnlyCollection<T>` also gets `Property_Count`, which is `int` when the
 collection cannot be null and `int?` when it can — a struct collection on a non-nullable chain gives a plain
@@ -599,15 +619,42 @@ file rather than a diagnostic. It is placed after the chain's own accessor, so `
 link can be null.
 
 The substitution is total and transparent. The wrapper is not traversed, the property keeps the name the
-wrapper would have had, and the *target* is then classified by the ordinary rules — a mapped `List<int>` gets
-`_Display` and `_Array`, a mapped object graph is flattened, a mapped `Instant` is converted to `DateTime`.
+wrapper would have had, and the *target* is then classified by the ordinary rules — every transformation its
+type earns, it gets:
+
+| Target               | Emitted |
+| :------------------- | :- |
+| `List<int>`          | the list, `_Count`, `_Display`, `_Array` |
+| a formattable class  | the value, `_Formatted` |
+| a formattable struct | the value, its flattened members, `_Formatted` |
+| `JsonNode`           | `_Formatted` |
+| `Instant`            | the converted `DateTime`, `_Formatted` |
+| an enum, or a leaf   | the value alone — a grid renders those already |
+
 The lookup runs before every other rule, so a mapping can override a type the generator already understands
 as easily as it can describe one it does not.
 
 On a property the binder [declares itself](#properties-you-declare-yourself), where the bare name is already
 taken, the mapped value takes a `_Value` segment just as a conversion does.
 
-Two things `[MapType]` deliberately does not do: it never emits the rendered twin that
-`[StrongIdTemplateSetup]` gives a strongly typed ID, and it matches the type exactly, so a closed generic
-must be named as one.
+Naming an **interface or a base type** maps everything that derives from it, which is what makes one line
+enough for a whole family:
+
+```csharp
+[MapType(typeof(IStringId), typeof(string), "Value")]
+public class BindingOptions;
+```
+
+An exact mapping for a type always beats an inherited one, wherever the two are declared.
+
+That form is the answer to a strongly typed ID **declared in another assembly**. `StronglyTypedIds`' own
+attribute is marked `[Conditional]`, so the compiler never writes it into the assembly — a generator running
+in a project that merely *references* those IDs sees them as metadata with no attribute left to read, and
+`[StrongIdTemplateSetup]` has nothing to match on. The marker interface a template adds does survive, so
+mapping that interface reaches every ID at once. In the project that declares the IDs the attribute is right
+there in source, and the ordinary strong-ID handling applies.
+
+Two things `[MapType]` deliberately does not do. It renders the *mapped value*, never the wrapper, so unlike
+`[StrongIdTemplateSetup]` it emits no twin for a wrapper that is itself `IFormattable` — what comes out is
+whatever the target earns. And it matches a named type exactly, so a closed generic must be named as one.
 

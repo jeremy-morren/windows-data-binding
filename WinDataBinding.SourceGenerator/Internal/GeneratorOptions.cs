@@ -22,16 +22,23 @@ internal sealed class GeneratorOptions
     private const string SetupAttribute = "WinDataBinding.StrongIdTemplateSetupAttribute";
     private const string MapAttribute = "WinDataBinding.MapTypeAttribute";
 
-    public static readonly GeneratorOptions Empty = new([], new Dictionary<ISymbol, TypeMapping>(SymbolEqualityComparer.Default));
+    public static readonly GeneratorOptions Empty = new(
+        [], new Dictionary<ISymbol, TypeMapping>(SymbolEqualityComparer.Default), []);
 
     private readonly Dictionary<string, StrongIdBinding> _strongIdTemplates;
     private readonly Dictionary<ISymbol, TypeMapping> _mappings;
 
+    /// <summary>The same mappings in declaration order, for the walk up a type's interfaces and bases.</summary>
+    private readonly List<(ITypeSymbol Source, TypeMapping Mapping)> _byHierarchy;
+
     private GeneratorOptions(
-        Dictionary<string, StrongIdBinding> strongIdTemplates, Dictionary<ISymbol, TypeMapping> mappings)
+        Dictionary<string, StrongIdBinding> strongIdTemplates,
+        Dictionary<ISymbol, TypeMapping> mappings,
+        List<(ITypeSymbol Source, TypeMapping Mapping)> byHierarchy)
     {
         _strongIdTemplates = strongIdTemplates;
         _mappings = mappings;
+        _byHierarchy = byHierarchy;
     }
 
     public static GeneratorOptions From(INamedTypeSymbol? optionsType, KnownTypeSymbols known)
@@ -40,6 +47,7 @@ internal sealed class GeneratorOptions
 
         var templates = new Dictionary<string, StrongIdBinding>(StringComparer.Ordinal);
         var mappings = new Dictionary<ISymbol, TypeMapping>(SymbolEqualityComparer.Default);
+        var byHierarchy = new List<(ITypeSymbol Source, TypeMapping Mapping)>();
 
         for (var current = optionsType;
              current is not null && current.SpecialType != SpecialType.System_Object;
@@ -53,13 +61,13 @@ internal sealed class GeneratorOptions
                         AddTemplate(attribute, templates);
                         break;
                     case MapAttribute:
-                        AddMapping(attribute, mappings);
+                        AddMapping(attribute, mappings, byHierarchy);
                         break;
                 }
             }
         }
 
-        return new GeneratorOptions(templates, mappings);
+        return new GeneratorOptions(templates, mappings, byHierarchy);
     }
 
     /// <summary>The conversion declared for a custom strongly typed ID template, if there is one.</summary>
@@ -67,8 +75,44 @@ internal sealed class GeneratorOptions
         _strongIdTemplates.TryGetValue(name, out binding);
 
     /// <summary>The type declared in place of a wrapper, if there is one.</summary>
-    public bool TryGetMapping(ITypeSymbol type, out TypeMapping mapping) =>
-        _mappings.TryGetValue(type, out mapping);
+    public bool TryGetMapping(ITypeSymbol type, out TypeMapping mapping)
+    {
+        if (_mappings.TryGetValue(type, out mapping)) return true;
+
+        // A mapping named on an interface or a base type stands for everything deriving from it. That is what
+        // makes a whole family of wrappers reachable in one line — and for some families it is the only thing
+        // that can reach them at all, their own attributes never having been written to the assembly.
+        foreach (var (source, candidate) in _byHierarchy)
+        {
+            if (!DerivesFrom(type, source)) continue;
+
+            mapping = candidate;
+            return true;
+        }
+
+        mapping = default;
+        return false;
+    }
+
+    private static bool DerivesFrom(ITypeSymbol type, ITypeSymbol target)
+    {
+        if (target.TypeKind == TypeKind.Interface)
+        {
+            foreach (var candidate in type.AllInterfaces)
+                if (SymbolEqualityComparer.Default.Equals(candidate, target))
+                    return true;
+
+            return false;
+        }
+
+        if (target.TypeKind != TypeKind.Class) return false;
+
+        for (var current = type.BaseType; current is not null; current = current.BaseType)
+            if (SymbolEqualityComparer.Default.Equals(current, target))
+                return true;
+
+        return false;
+    }
 
     private static void AddTemplate(AttributeData attribute, Dictionary<string, StrongIdBinding> templates)
     {
@@ -98,7 +142,10 @@ internal sealed class GeneratorOptions
             RendersSelf: true));
     }
 
-    private static void AddMapping(AttributeData attribute, Dictionary<ISymbol, TypeMapping> mappings)
+    private static void AddMapping(
+        AttributeData attribute,
+        Dictionary<ISymbol, TypeMapping> mappings,
+        List<(ITypeSymbol Source, TypeMapping Mapping)> byHierarchy)
     {
         if (attribute.ConstructorArguments.Length < 3) return;
 
@@ -108,7 +155,10 @@ internal sealed class GeneratorOptions
             return;
 
         // The most derived mapping for a type wins.
-        if (!mappings.ContainsKey(sourceType))
-            mappings.Add(sourceType, new TypeMapping(targetType, expression));
+        if (mappings.ContainsKey(sourceType)) return;
+
+        var mapping = new TypeMapping(targetType, expression);
+        mappings.Add(sourceType, mapping);
+        byHierarchy.Add((sourceType, mapping));
     }
 }

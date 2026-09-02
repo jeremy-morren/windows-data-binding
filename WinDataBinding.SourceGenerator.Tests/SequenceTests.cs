@@ -18,7 +18,7 @@ public class SequenceTests
         const string expected = """
             namespace Demo
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                 partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
@@ -114,6 +114,83 @@ public class SequenceTests
             + "global::System.String.Join(\", \", items) : null;");
         result.Source.Should().Contain(
             "public string? Names_Array => Names_Display is { } display ? $\"[{display}]\" : null;");
+    }
+
+    [Fact]
+    public void Joins_a_bare_enumerable_of_strings()
+    {
+        // The property is the interface itself rather than a concrete collection.
+        var source = TestSources.Wrap("""
+            using System.Collections.Generic;
+
+            public class Model { public IEnumerable<string> Tags { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain(
+            "public global::System.Collections.Generic.IEnumerable<string>? Tags => _source.Tags;");
+        result.Source.Should().Contain(
+            "public string? Tags_Display => _source.Tags is { } items ? "
+            + "global::System.String.Join(\", \", items) : null;");
+        result.Source.Should().Contain(
+            "public string? Tags_Array => Tags_Display is { } display ? $\"[{display}]\" : null;");
+
+        // IEnumerable<T> alone still has no length to report.
+        result.Source.Should().NotContain("Tags_Count");
+    }
+
+    [Fact]
+    public void Names_enum_elements_with_the_overload_that_is_not_obsolete()
+    {
+        // An enum is IFormattable, but Enum.ToString(string, IFormatProvider) is obsolete: it ignores the
+        // provider. Calling it would put a CS0618 in the consumer's build for text identical to ToString().
+        var source = TestSources.Wrap("""
+            using System.Collections.Generic;
+
+            public enum Grade { Low, High }
+
+            public class Model { public List<Grade> Grades { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain("item => item.ToString()");
+        result.Source.Should().NotContain("item.ToString(null, null)");
+
+        result.Source.Should().Contain("public int? Grades_Count => _source.Grades?.Count;");
+    }
+
+    [Fact]
+    public void Renders_a_sequence_of_nullable_elements()
+    {
+        // Nullable<T> implements nothing of its own, so the renderer comes from what it wraps and the call
+        // is lifted. string.Join turns the null that comes back into an empty entry.
+        var source = TestSources.Wrap("""
+            using System.Collections.Generic;
+
+            public enum Grade { Low, High }
+
+            public class Model
+            {
+                public List<int?> Scores { get; set; }
+                public List<Grade?> Grades { get; set; }
+                public List<Instant?> Stamps { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain(
+            "public string? Scores_Display => _source.Scores is { } items ? global::System.String.Join(\", \", "
+            + "global::System.Linq.Enumerable.Select(items, item => item?.ToString(null, null))) : null;");
+        result.Source.Should().Contain("public string? Scores_Array =>");
+
+        // The enum still avoids the obsolete overload once unwrapped.
+        result.Source.Should().Contain("item => item?.ToString()");
+
+        // And a wrapped NodaTime value formats itself the same way it would unwrapped.
+        result.Source.Should().Contain("public string? Stamps_Display =>");
     }
 
     [Fact]

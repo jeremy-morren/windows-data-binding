@@ -38,6 +38,12 @@ public class GeneratorResultAssertions(GeneratorResult subject)
             .FailWith("Expected the generated code to compile{reason}, but found {0}.",
                 () => string.Join("\n", Subject.CompilationErrors.Select(d => d.ToString())));
 
+        Execute.Assertion
+            .BecauseOf(because, becauseArgs)
+            .ForCondition(Subject.GeneratedCodeWarnings.IsEmpty)
+            .FailWith("Expected the generated code to compile without warnings{reason}, but found {0}.",
+                () => string.Join("\n", Subject.GeneratedCodeWarnings.Select(d => d.ToString())));
+
         return new AndConstraint<GeneratorResultAssertions>(this);
     }
 

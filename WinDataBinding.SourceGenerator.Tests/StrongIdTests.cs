@@ -63,7 +63,7 @@ public class StrongIdTests
         const string expected = """
             namespace Demo
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                 partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
@@ -322,6 +322,8 @@ public class StrongIdTests
     [Fact]
     public void Accepts_a_built_in_template_alongside_a_custom_one()
     {
+        // The custom names sit beside a built-in template rather than replacing it, so the ordinary rules
+        // apply untouched: the value takes the bare name, never a _Value suffix.
         var source = Wrap("""
             [StronglyTypedId(Template.Int, "int-efcore")]
             public readonly partial struct TicketId { public int Value { get; } }
@@ -333,5 +335,111 @@ public class StrongIdTests
 
         result.Should().HaveNoDiagnostics();
         result.Source.Should().Contain("public int Ticket => _source.Ticket.Value;");
+        result.Source.Should().Contain(
+            "public string? Ticket_Formatted => _source.Ticket.Value.ToString(null, null);");
+        result.Source.Should().NotContain("Ticket_Value");
+    }
+
+    [Fact]
+    public void Keeps_the_string_rule_when_a_custom_template_sits_beside_it()
+    {
+        var source = Wrap("""
+            [StronglyTypedId(Template.String, "OtherTemplate")]
+            public readonly partial struct SkuId { public string Value { get; } }
+
+            public class Model { public SkuId Sku { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        // Bare name, of the template's underlying type.
+        result.Source.Should().Contain("public string? Sku => _source.Sku.Value;");
+        result.Source.Should().NotContain("Sku_Value");
+
+        // A string is already text, so the String template still emits no rendered twin.
+        result.Source.Should().NotContain("Sku_Formatted");
+    }
+
+    [Fact]
+    public void Ignores_extra_template_names_beside_a_built_in_one()
+    {
+        // The names arrive as a params array. Reading Value off an array argument throws, so the whole
+        // generator would fall over here if the argument's kind were not tested first.
+        var source = Wrap("""
+            [StronglyTypedId(Template.Guid, "one", "two", "three")]
+            public readonly partial struct OrderId { public System.Guid Value { get; } }
+
+            public class Model { public OrderId Order { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+        result.Source.Should().Contain("public global::System.Guid Order => _source.Order.Value;");
+        result.Source.Should().Contain(
+            "public string? Order_Formatted => _source.Order.Value.ToString(null, null);");
+    }
+
+    [Fact]
+    public void Ignores_arguments_of_the_attribute_it_has_no_use_for()
+    {
+        // A different release of the package spells the attribute differently. Only the leading template
+        // argument is read, so extra positional arguments and named ones alike pass by untouched.
+        const string source = """
+            using StronglyTypedIds;
+            using WinDataBinding;
+
+            namespace StronglyTypedIds
+            {
+                public enum Template { Guid, Int, String, Long }
+
+                [System.AttributeUsage(System.AttributeTargets.Struct)]
+                public sealed class StronglyTypedIdAttribute : System.Attribute
+                {
+                    public StronglyTypedIdAttribute(Template template, bool generateJsonConverter, params string[] templateNames) { }
+                    public string Namespace { get; set; }
+                }
+            }
+
+            namespace Demo
+            {
+                [StronglyTypedId(Template.Long, false, "one", "two", Namespace = "Ids")]
+                public readonly partial struct BatchId { public long Value { get; } }
+
+                public class Model { public BatchId Batch { get; set; } }
+
+                [GenerateWindowsBindingModel(typeof(Model))]
+                public sealed partial class ModelBinder { }
+            }
+            """;
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+        result.Source.Should().Contain("public long Batch => _source.Batch.Value;");
+    }
+
+    [Fact]
+    public void Warns_for_an_attribute_that_names_no_template_at_all()
+    {
+        // A bare [StronglyTypedId] passes an empty params array, so there is nothing to match on.
+        var source = Wrap("""
+            [StronglyTypedId]
+            public readonly partial struct MysteryId { public int Value { get; } }
+
+            public class Model
+            {
+                public MysteryId Mystery { get; set; }
+                public int Kept { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveDiagnostic("WGD005", DiagnosticSeverity.Warning);
+        result.Source.Should().NotContain("Mystery");
+        result.Source.Should().Contain("public int Kept => _source.Kept;");
     }
 }

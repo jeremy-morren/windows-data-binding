@@ -49,8 +49,8 @@ internal static class Diagnostics
 
     public static readonly DiagnosticDescriptor GenericType = new(
         "WGD003",
-        "Generic types are not supported",
-        "The type '{0}' is generic; [GenerateWindowsBindingModel] supports neither generic binding model types nor generic source types",
+        "Open generic types are not supported",
+        "The type '{0}' is an open generic; [GenerateWindowsBindingModel] needs a binding model type that is not generic, and a source type with its type arguments supplied",
         Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public static readonly DiagnosticDescriptor CustomStrongIdTemplate = new(

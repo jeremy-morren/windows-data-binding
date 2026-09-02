@@ -20,7 +20,7 @@ public class DiagnosticTests
         const string expected = """
             namespace Demo
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                 partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
@@ -202,16 +202,17 @@ public class DiagnosticTests
     }
 
     [Fact]
-    public void Rejects_a_generic_source_type()
+    public void Rejects_an_open_generic_source_type()
     {
+        // Nothing is substituted into Model<>, so there is nothing to flatten.
         const string source = """
             using WinDataBinding;
 
             namespace Demo;
 
-            public class Model<T> { public int Value { get; set; } }
+            public class Model<T> { public T Value { get; set; } }
 
-            [GenerateWindowsBindingModel(typeof(Model<int>))]
+            [GenerateWindowsBindingModel(typeof(Model<>))]
             public sealed partial class ModelBinder { }
             """;
 

@@ -55,10 +55,14 @@ internal static class Parser
 
         if (binder.IsGenericType)
             diagnostics.Add(DiagnosticInfo.Create(Diagnostics.GenericType, location, binder.Name));
-        if (sourceType.IsGenericType)
+
+        // A closed generic source is fine: its members come back with the type arguments already substituted,
+        // so Base<Concrete> reads exactly as a hand-written Concrete-shaped type would. Only typeof(Base<>),
+        // which supplies nothing to substitute, has no members worth walking.
+        if (sourceType.IsUnboundGenericType)
             diagnostics.Add(DiagnosticInfo.Create(Diagnostics.GenericType, location, sourceType.Name));
 
-        var properties = binder.IsGenericType || sourceType.IsGenericType
+        var properties = binder.IsGenericType || sourceType.IsUnboundGenericType
             ? ImmutableArray<GeneratedProperty>.Empty
             : Collect(binder, sourceType, known, options, diagnostics, location, ct).Properties;
 
@@ -132,7 +136,7 @@ internal static class Parser
                 Unchecked + "." + member.Name,
                 lifted ? "?." : ".",
                 Nullable || lifted,
-                Remarks.Add(member.ContainingType.ToDisplayString(Formats.Cref) + "." + member.Name),
+                Remarks.Add(Formats.ToCref(member.ContainingType) + "." + member.Name),
                 Descriptions.Add(Summary(member, known)));
         }
     }
@@ -260,7 +264,7 @@ internal static class Parser
                 if (element != Renderer.None)
                 {
                     var displayIndex = candidates.Count;
-                    candidates.Add(Display(next, element));
+                    candidates.Add(Display(next, element, known.IsElementLifted(underlying)));
                     candidates.Add(Rendered(next, displayIndex));
                 }
                 continue;
@@ -345,7 +349,7 @@ internal static class Parser
         List<Candidate> candidates, CancellationToken ct)
     {
         if (!known.IsLocal(binder) || !known.TryGetBinder(binder, out var source, out var optionsType)) return;
-        if (binder.IsGenericType || source.IsGenericType) return;
+        if (binder.IsGenericType || source.IsUnboundGenericType) return;
 
         if (!known.TryGetFlattened(binder, out var flattened))
         {
@@ -498,14 +502,14 @@ internal static class Parser
     /// <summary>
     /// The elements joined into one string, or null when the sequence itself is null.
     /// </summary>
-    private static Candidate Display(Path path, Renderer element) => new(
+    private static Candidate Display(Path path, Renderer element, bool lifted) => new(
         path.Chain.Add("Display"),
         "string?",
         // Strings are their own display text, so they are joined as they stand rather than projected first.
         $"{path.Safe} is {{ }} items ? global::System.String.Join(\", \", " +
         (element == Renderer.Text
             ? "items)"
-            : $"global::System.Linq.Enumerable.Select(items, item => {KnownTypes.RenderElement(element, "item")}))")
+            : $"global::System.Linq.Enumerable.Select(items, item => {KnownTypes.RenderElement(element, "item", lifted)}))")
         + " : null",
         null,
         null,

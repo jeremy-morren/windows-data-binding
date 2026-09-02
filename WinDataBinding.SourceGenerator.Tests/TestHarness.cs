@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.RegularExpressions;
 using Basic.Reference.Assemblies;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
@@ -17,11 +18,23 @@ public enum Target
     NetStandard20,
 }
 
+/// <param name="Source">The generated source, with the stamped tool version normalised.</param>
+/// <param name="RawSource">The generated source exactly as written, for asserting on that version itself.</param>
 public sealed record GeneratorResult(
     string Source,
+    string RawSource,
     ImmutableArray<Diagnostic> GeneratorDiagnostics,
     ImmutableArray<Diagnostic> CompilationDiagnostics)
 {
+    /// <summary>
+    /// Warnings coming from the generated file itself. These land in the consumer's build, so the generator
+    /// has to avoid them; warnings from the test's own model source are not our business.
+    /// </summary>
+    public ImmutableArray<Diagnostic> GeneratedCodeWarnings =>
+        [.. CompilationDiagnostics.Where(d =>
+            d.Severity == DiagnosticSeverity.Warning &&
+            d.Location.SourceTree?.FilePath.EndsWith(".g.cs", StringComparison.Ordinal) == true)];
+
     /// <summary>Compilation errors that are not our own reported diagnostics.</summary>
     public ImmutableArray<Diagnostic> CompilationErrors =>
         [.. CompilationDiagnostics.Where(d =>
@@ -41,7 +54,7 @@ public sealed record GeneratorResult(
 
 public static class TestHarness
 {
-    private static readonly MetadataReference AttributeReference =
+    internal static readonly MetadataReference AttributeReference =
         MetadataReference.CreateFromFile(typeof(GenerateWindowsBindingModelAttribute).Assembly.Location);
 
     private static readonly MetadataReference NodaTimeNet8Reference =
@@ -79,8 +92,11 @@ public static class TestHarness
             ? ""
             : string.Join("\n\n", runResult.GeneratedTrees.Select(t => t.ToString()));
 
+        var raw = generated.Replace("\r\n", "\n");
+
         return new GeneratorResult(
             Normalize(generated),
+            raw,
             runResult.Diagnostics,
             output.GetDiagnostics());
     }
@@ -104,7 +120,17 @@ public static class TestHarness
     public static void AssertDiagnostic(this GeneratorResult result, string id, DiagnosticSeverity severity) =>
         result.Should().HaveDiagnostic(id, severity);
 
-    private static string Normalize(string text) => text.Replace("\r\n", "\n");
+    /// <summary>
+    /// The version stamped into <c>[GeneratedCode]</c> is the generator's package version, so a build given a
+    /// different <c>VersionSuffix</c> would otherwise fail every pinned expectation. Only that one value is
+    /// rewritten, and that it is stamped at all is asserted separately.
+    /// </summary>
+    private static readonly Regex StampedVersion = new(
+        "(?<=GeneratedCode\\(\"WinDataBinding\\.SourceGenerator\", )\"[^\"]*\"",
+        RegexOptions.Compiled);
+
+    private static string Normalize(string text) =>
+        StampedVersion.Replace(text.Replace("\r\n", "\n"), "\"1.0.0\"");
 }
 
 /// <summary>Boilerplate for the small models the tests generate from.</summary>

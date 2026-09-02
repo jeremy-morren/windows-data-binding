@@ -11,7 +11,24 @@ namespace WinDataBinding.SourceGenerator.Internal;
 internal static class Emitter
 {
     private static readonly string ToolName = typeof(Emitter).Assembly.GetName().Name!;
-    private static readonly string ToolVersion = typeof(Emitter).Assembly.GetName().Version!.ToString();
+    private static readonly string ToolVersion = PackageVersion();
+
+    /// <summary>
+    /// The package version, prerelease suffix and all. The assembly version would say only 1.0.0.0: it is
+    /// deliberately stable across a release line, which makes it useless for telling one build from another.
+    /// </summary>
+    private static string PackageVersion()
+    {
+        var assembly = typeof(Emitter).Assembly;
+        var informational = assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+
+        if (string.IsNullOrEmpty(informational)) return assembly.GetName().Version!.ToString();
+
+        // The build appends '+<commit>'. That is build metadata rather than part of the version.
+        var metadata = informational!.IndexOf('+');
+        return metadata < 0 ? informational : informational.Substring(0, metadata);
+    }
 
     /// <summary>
     /// Doc-comment warnings the generated file suppresses. 

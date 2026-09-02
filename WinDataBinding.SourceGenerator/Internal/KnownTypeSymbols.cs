@@ -123,6 +123,9 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     /// <summary>How a sequence's elements render as text.</summary>
     public Renderer GetElementRenderer(ITypeSymbol type) => Get(type).ElementRenderer;
 
+    /// <summary>Whether an element can be null, so rendering it has to be lifted.</summary>
+    public bool IsElementLifted(ITypeSymbol type) => Get(type).ElementIsLifted;
+
     /// <summary>How to read the number of items the type holds.</summary>
     public CountAccess GetCount(ITypeSymbol type) => Get(type).Count;
 
@@ -164,7 +167,13 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
             return new TypeTraits(false, json, Renderer.None);
 
         if (ElementType(type) is { } element)
-            return new TypeTraits(true, Renderer.None, RendererFor(element), CountAccessFor(type));
+        {
+            // Nullable<T> implements nothing itself, so the renderer comes from what it wraps and the call is
+            // lifted instead. Without that a sequence of T? would render nothing at all.
+            var lifted = element.IsReferenceType || IsNullableValue(element);
+            return new TypeTraits(
+                true, Renderer.None, RendererFor(Unwrap(element)), CountAccessFor(type), lifted);
+        }
 
         return new TypeTraits(false, RendererFor(type), Renderer.None);
     }
@@ -173,6 +182,10 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     {
         // Only reached for a sequence's elements; a string property itself is a leaf and never gets here.
         if (type.SpecialType == SpecialType.System_String) return Renderer.Text;
+
+        // An enum implements IFormattable, but its two-argument ToString is obsolete: the provider is
+        // ignored, and calling it would hand the consumer a CS0618. The plain overload gives the same text.
+        if (type.TypeKind == TypeKind.Enum) return Renderer.Enum;
 
         if (JsonRenderer(type) is var json && json != Renderer.None) return json;
 
@@ -362,6 +375,12 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
 
         return false;
     }
+
+    private static ITypeSymbol Unwrap(ITypeSymbol type) =>
+        IsNullableValue(type) ? ((INamedTypeSymbol)type).TypeArguments[0] : type;
+
+    private static bool IsNullableValue(ITypeSymbol type) =>
+        type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
 
     /// <summary>The <c>T</c> of the sequence, or null when the type is not one.</summary>
     private static ITypeSymbol? ElementType(ITypeSymbol type)

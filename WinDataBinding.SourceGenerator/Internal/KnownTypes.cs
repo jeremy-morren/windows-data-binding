@@ -98,6 +98,7 @@ internal static class KnownTypes
     /// </summary>
     public static string RenderValue(Renderer renderer, string safe, string accessor) => renderer switch
     {
+        Renderer.Enum => $"{safe}{accessor}ToString()",
         Renderer.FormattableDirect => $"{safe}{accessor}ToString(null, null)",
         Renderer.FormattableByCast => $"((global::System.IFormattable){safe})?.ToString(null, null)",
         Renderer.JsonNode => $"{safe}{accessor}ToJsonString()",
@@ -105,17 +106,27 @@ internal static class KnownTypes
         _ => throw new ArgumentOutOfRangeException(nameof(renderer)),
     };
 
-    /// <summary>Renders one element of a sequence, inside the lambda that joins them.</summary>
-    public static string RenderElement(Renderer renderer, string item) => renderer switch
+    /// <summary>
+    /// Renders one element of a sequence, inside the lambda that joins them.
+    /// An element that can be null is reached through <c>?.</c>, and the null that comes back joins as an
+    /// empty entry rather than throwing.
+    /// </summary>
+    public static string RenderElement(Renderer renderer, string item, bool lifted)
     {
-        Renderer.FormattableDirect => $"{item}.ToString(null, null)",
-        Renderer.FormattableByCast => $"((global::System.IFormattable){item}).ToString(null, null)",
-        // Text never reaches here: a sequence of strings is joined without projecting it first.
-        Renderer.Text => item,
-        Renderer.JsonNode => $"{item}?.ToJsonString()",
-        Renderer.JsonElement => $"{item}.GetRawText()",
-        _ => throw new ArgumentOutOfRangeException(nameof(renderer)),
-    };
+        var reach = lifted ? "?." : ".";
+
+        return renderer switch
+        {
+            Renderer.Enum => $"{item}{reach}ToString()",
+            Renderer.FormattableDirect => $"{item}{reach}ToString(null, null)",
+            Renderer.FormattableByCast => $"((global::System.IFormattable){item}){reach}ToString(null, null)",
+            // Text never reaches here: a sequence of strings is joined without projecting it first.
+            Renderer.Text => item,
+            Renderer.JsonNode => $"{item}?.ToJsonString()",
+            Renderer.JsonElement => $"{item}{reach}GetRawText()",
+            _ => throw new ArgumentOutOfRangeException(nameof(renderer)),
+        };
+    }
 
     public static bool IsLeaf(string fullName) => LeafTypes.Contains(fullName);
 

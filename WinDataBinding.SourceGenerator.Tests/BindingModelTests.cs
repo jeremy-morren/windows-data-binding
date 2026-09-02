@@ -52,7 +52,7 @@ public class BindingModelTests
         const string expected = """
             namespace Demo
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                 partial class PersonModelBinder : global::System.IEquatable<PersonModelBinder>
                 {
                     private readonly global::Demo.Person _source;
@@ -185,7 +185,7 @@ public class BindingModelTests
         const string expected = """
             namespace Demo
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                 partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
@@ -324,7 +324,7 @@ public class BindingModelTests
         const string expected = """
             namespace Demo
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                 partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
@@ -394,7 +394,7 @@ public class BindingModelTests
         const string expected = """
             namespace Demo
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                 partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
@@ -461,7 +461,7 @@ public class BindingModelTests
             {
                 partial class Outer
                 {
-                    [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                    [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                     partial class Binder : global::System.IEquatable<Binder>
                     {
                         private readonly global::Demo.Model _source;
@@ -526,7 +526,7 @@ public class BindingModelTests
         const string expected = """
             namespace Demo
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
                 partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
