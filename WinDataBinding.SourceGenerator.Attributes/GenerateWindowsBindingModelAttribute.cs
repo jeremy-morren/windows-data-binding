@@ -22,8 +22,8 @@ namespace WinDataBinding
         /// <summary>
         /// Creates a new instance of the <see cref="GenerateWindowsBindingModelAttribute"/> class for the specified model type.
         /// </summary>
-        /// <param name="generationOptions">The options for generating the Windows binding model.</param>
         /// <param name="modelType">The model type for which to generate properties for binding to Windows controls.</param>
+        /// <param name="generationOptions">The options for generating the Windows binding model.</param>
         /// <remarks>
         /// The generation options is a class decorated with attributes that the source generator understands. Available attributes:
         /// <list type="bullet">
@@ -32,7 +32,7 @@ namespace WinDataBinding
         /// </item>
         /// </list>
         /// </remarks>
-        public GenerateWindowsBindingModelAttribute(Type generationOptions, Type modelType) {}
+        public GenerateWindowsBindingModelAttribute(Type modelType, Type generationOptions) {}
     }
 }
 

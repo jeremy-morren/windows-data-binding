@@ -68,12 +68,13 @@ internal static class KnownTypes
     /// from the struct's own Value member: that member is written by another source generator, and generators
     /// cannot see each other's output.
     /// </summary>
-    private static readonly Dictionary<string, Conversion> StrongIdTemplates = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, StrongIdBinding> StrongIdTemplates = new(StringComparer.Ordinal)
     {
-        ["Guid"] = Tail(null, "global::System.Guid", "Value"),
-        ["Int"] = Tail(null, "int", "Value"),
-        ["Long"] = Tail(null, "long", "Value"),
-        ["String"] = Tail(null, "string", "Value", isReference: true),
+        ["Guid"] = new("global::System.Guid", false, "Value", Renderer.Formattable),
+        ["Int"] = new("int", false, "Value", Renderer.Formattable),
+        ["Long"] = new("long", false, "Value", Renderer.Formattable),
+        // string is already text, so it gets no rendered twin.
+        ["String"] = new("string", true, "Value", Renderer.None),
     };
 
     /// <summary>
@@ -99,8 +100,8 @@ internal static class KnownTypes
 
     public static bool IsLeaf(string fullName) => LeafTypes.Contains(fullName);
 
-    public static bool TryGetStrongIdTemplate(string template, out Conversion conversion) =>
-        StrongIdTemplates.TryGetValue(template, out conversion!);
+    public static bool TryGetStrongIdTemplate(string template, out StrongIdBinding binding) =>
+        StrongIdTemplates.TryGetValue(template, out binding);
 
     public static bool TryGetConversions(string fullName, out Conversion[] conversions) =>
         ConversionsByType.TryGetValue(fullName, out conversions!);

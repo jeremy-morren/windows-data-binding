@@ -314,6 +314,39 @@ gives
 public global::System.Guid Order => _source.Order.Value;
 ```
 
-A custom template (`[StronglyTypedId("my-guid")]`) or bare ([StronglyTypedId]) is not supported — the property is skipped and `WGD005` is
-reported. A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
+A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
+
+A **custom** template has to be described first, because the property holding the underlying value is written
+by StronglyTypedId's own generator, and generators cannot see each other's output. Describe it with
+`[StrongIdTemplateSetup]` on a generation options type, then pass that type as the second argument:
+
+```csharp
+[StrongIdTemplateSetup("my-guid", typeof(Guid), "Value")]
+public class BindingOptions;
+
+[StronglyTypedId("my-guid")]
+public readonly partial struct OrderId;
+
+public class Model { public OrderId Order { get; set; } }
+
+[GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+public sealed partial class ModelBinder { }
+```
+
+gives `public global::System.Guid Order => _source.Order.Value;`.
+
+Without a matching setup, a custom template is skipped and `WGD005` is reported. So is a bare
+`[StronglyTypedId]`: it defaults to `Template.Guid`, but that default can be changed for a whole assembly,
+and guessing wrong would emit a `Guid` property over an `int` backing field.
+
+## Generation options
+
+The second argument to `[GenerateWindowsBindingModel]` names a type carrying configuration attributes. It
+need not derive from anything and is never instantiated — only its attributes are read. Attributes on its
+base types are read too, with the most derived declaration of a template name winning, and attributes the
+generator does not understand are ignored.
+
+| Attribute                        | Purpose                                                                                                                                                           |
+| :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StrongIdTemplateSetupAttribute` | Describes a custom `StronglyTypedId` template: the template name to match, the type of the underlying value, and the name of the property holding it. Repeatable. |
 

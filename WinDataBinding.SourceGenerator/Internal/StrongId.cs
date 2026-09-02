@@ -13,9 +13,19 @@ internal enum StrongIdKind
     Custom,
 }
 
-/// <param name="Template">The built-in template's name, set only when <paramref name="Kind"/> is a template.</param>
+/// <param name="Template">
+/// The template's name: a built-in template's enum member, or the custom template's string. Null when the
+/// type is not a strongly typed ID, or when a bare <c>[StronglyTypedId]</c> names no template at all.
+/// </param>
 internal readonly record struct StrongId(StrongIdKind Kind, string? Template)
 {
     public static readonly StrongId None = new(StrongIdKind.None, null);
-    public static readonly StrongId Custom = new(StrongIdKind.Custom, null);
 }
+
+/// <summary>How a strongly typed ID exposes its underlying value.</summary>
+/// <param name="ValueType">Fully qualified type of the value.</param>
+/// <param name="IsReference">Whether that type is a reference type, so the property is always nullable.</param>
+/// <param name="PropertyName">The property holding the value.</param>
+/// <param name="Renderer">How that value renders as text, for the twin property.</param>
+internal readonly record struct StrongIdBinding(
+    string ValueType, bool IsReference, string PropertyName, Renderer Renderer);

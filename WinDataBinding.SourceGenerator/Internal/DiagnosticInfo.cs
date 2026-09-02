@@ -57,7 +57,8 @@ internal static class Diagnostics
         "WGD005",
         "Custom strong ID templates are not supported",
         "Property '{0}' is skipped because strongly typed ID '{1}' does not use a built-in template; "
-        + "custom strong ID templates are currently not supported",
+        + "declare the template with [StrongIdTemplateSetup] on the options type passed to "
+        + "[GenerateWindowsBindingModel]",
         Category, DiagnosticSeverity.Warning, isEnabledByDefault: true);
 
     public static readonly DiagnosticDescriptor ContainingTypeNotPartial = new(

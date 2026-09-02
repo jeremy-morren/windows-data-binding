@@ -124,7 +124,11 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
                 TemplateName(argument) is { } template)
                 return new StrongId(StrongIdKind.Template, template);
 
-            return StrongId.Custom;
+            // A custom template is named by a string argument; a bare [StronglyTypedId] names nothing.
+            return new StrongId(StrongIdKind.Custom,
+                attribute.ConstructorArguments.Length > 0
+                    ? attribute.ConstructorArguments[0].Value as string
+                    : null);
         }
 
         return StrongId.None;

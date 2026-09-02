@@ -21,10 +21,16 @@ internal static class Parser
             context.Attributes.Length == 0)
             return null;
 
+        // The model type comes first; a second argument names the generation options type.
         var attribute = context.Attributes[0];
-        if (attribute.ConstructorArguments.Length != 1 ||
-            attribute.ConstructorArguments[0].Value is not INamedTypeSymbol sourceType)
-            return null;
+        var arguments = attribute.ConstructorArguments;
+        if (arguments.Length is not (1 or 2)) return null;
+
+        if (arguments[0].Value is not INamedTypeSymbol sourceType) return null;
+
+        var known = new KnownTypeSymbols(context.SemanticModel.Compilation);
+        var options = GeneratorOptions.From(
+            arguments.Length == 2 ? arguments[1].Value as INamedTypeSymbol : null, known);
 
         var location = LocationInfo.From(declaration.Identifier.GetLocation());
         var diagnostics = new List<DiagnosticInfo>();
@@ -51,7 +57,7 @@ internal static class Parser
 
         var properties = binder.IsGenericType || sourceType.IsGenericType
             ? ImmutableArray<GeneratedProperty>.Empty
-            : Collect(sourceType, new KnownTypeSymbols(context.SemanticModel.Compilation), diagnostics, location, ct);
+            : Collect(sourceType, known, options, diagnostics, location, ct);
 
         var ns = binder.ContainingNamespace.IsGlobalNamespace
             ? null
@@ -119,12 +125,12 @@ internal static class Parser
         int SiblingIndex = -1);
 
     private static ImmutableArray<GeneratedProperty> Collect(
-        INamedTypeSymbol sourceType, KnownTypeSymbols known, List<DiagnosticInfo> diagnostics,
-        LocationInfo? location, CancellationToken ct)
+        INamedTypeSymbol sourceType, KnownTypeSymbols known, GeneratorOptions options,
+        List<DiagnosticInfo> diagnostics, LocationInfo? location, CancellationToken ct)
     {
         var candidates = new List<Candidate>();
         var visited = ImmutableHashSet.Create<INamedTypeSymbol>(SymbolEqualityComparer.Default, sourceType);
-        Walk(sourceType, Path.Root, visited, known, candidates, diagnostics, location, ct);
+        Walk(sourceType, Path.Root, visited, known, options, candidates, diagnostics, location, ct);
 
         // Names are assigned only once every chain is known, first-come-first-served in declaration order.
         var names = PropertyChain.GetPaths(candidates.ConvertAll(c => c.Chain));
@@ -153,11 +159,14 @@ internal static class Parser
 
     private static void Walk(
         INamedTypeSymbol type, Path path, ImmutableHashSet<INamedTypeSymbol> visited, KnownTypeSymbols known,
-        List<Candidate> candidates, List<DiagnosticInfo> diagnostics, LocationInfo? location, CancellationToken ct)
+        GeneratorOptions options, List<Candidate> candidates, List<DiagnosticInfo> diagnostics,
+        LocationInfo? location, CancellationToken ct, string? exclude = null)
     {
         foreach (var (member, memberType) in GetMembers(type))
         {
             ct.ThrowIfCancellationRequested();
+
+            if (exclude is not null && member.Name == exclude) continue;
 
             var next = path.Append(member, memberType, known);
             var underlying = Unwrap(memberType);
@@ -203,11 +212,29 @@ internal static class Parser
             var strongId = known.GetStrongId(underlying);
             if (strongId.Kind != StrongIdKind.None)
             {
-                if (strongId.Template is { } template && KnownTypes.TryGetStrongIdTemplate(template, out var unwrap))
-                    candidates.Add(Convert(next, unwrap));
-                else
+                if (!TryBind(strongId, options, out var binding))
+                {
                     diagnostics.Add(DiagnosticInfo.Create(Diagnostics.CustomStrongIdTemplate,
                         location, next.Chain.ToString(), underlying.Name));
+                    continue;
+                }
+
+                // Whatever the ID declares in source binds too. Its generated members, the value property
+                // among them, are invisible to us, so only what is statically there is reachable here.
+                var id = underlying as INamedTypeSymbol;
+                var walk = id is not null && !visited.Contains(id);
+                var alone = !walk || !HasMembersBesides(id!, binding.PropertyName);
+
+                // Standing alone the value takes the bare name; sharing with members it takes a suffix.
+                var suffix = alone ? null : binding.PropertyName;
+                candidates.Add(Convert(next, Conversions.Tail(
+                    suffix, binding.ValueType, binding.PropertyName, binding.IsReference)));
+
+                if (walk)
+                    Walk(id!, next, visited.Add(id!), known, options, candidates, diagnostics, location, ct,
+                        binding.PropertyName);
+
+                AddStrongIdFormatted(next, binding, suffix, candidates);
                 continue;
             }
 
@@ -224,9 +251,53 @@ internal static class Parser
 
             // The object itself binds too, before the members flattened out of it.
             candidates.Add(PassThrough(next, underlying));
-            Walk(complex, next, visited.Add(complex), known, candidates, diagnostics, location, ct);
+            Walk(complex, next, visited.Add(complex), known, options, candidates, diagnostics, location, ct);
             AddFormatted(next, renderer, candidates);
         }
+    }
+
+    private static bool HasMembersBesides(INamedTypeSymbol type, string exclude)
+    {
+        foreach (var (member, _) in GetMembers(type))
+            if (member.Name != exclude)
+                return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// The rendered twin of a strongly typed ID's value. Unlike other leaf values, an ID gets one: the point
+    /// of the wrapper is that the raw value rarely means anything on its own.
+    /// </summary>
+    private static void AddStrongIdFormatted(
+        Path path, StrongIdBinding binding, string? suffix, List<Candidate> candidates)
+    {
+        if (binding.Renderer == Renderer.None) return;
+
+        var value = path.Safe + path.Accessor + binding.PropertyName;
+        var chain = suffix is null ? path.Chain : path.Chain.Add(suffix);
+
+        candidates.Add(new Candidate(
+            chain.Add("Formatted"),
+            "string?",
+            KnownTypes.RenderValue(binding.Renderer, value, binding.IsReference ? "?." : "."),
+            null,
+            null,
+            path.Remarks,
+            Description(path.Descriptions, "Formatted")));
+    }
+
+    /// <summary>How the strongly typed ID exposes its value: a built-in template, or one the options declare.</summary>
+    private static bool TryBind(StrongId strongId, GeneratorOptions options, out StrongIdBinding binding)
+    {
+        if (strongId.Kind == StrongIdKind.Template && strongId.Template is { } template)
+            return KnownTypes.TryGetStrongIdTemplate(template, out binding);
+
+        if (strongId.Template is { } custom)
+            return options.TryGetStrongIdTemplate(custom, out binding);
+
+        binding = default;
+        return false;
     }
 
     /// <summary>

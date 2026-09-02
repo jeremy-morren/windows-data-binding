@@ -138,6 +138,72 @@ public class StrongIdTests
     }
 
     [Fact]
+    public void Inspects_the_part_of_the_id_that_is_visible_in_source()
+    {
+        // Only the hand-written part of the struct is reachable: StronglyTypedId's own generator writes the
+        // rest, and generators cannot see each other's output. Whatever is there is walked like any other
+        // struct or class graph.
+        var source = Wrap("""
+            [StronglyTypedId(Template.Int)]
+            public readonly partial struct CustomerId { public int Value { get; } }
+
+            public class Detail { public int Count { get; set; } }
+
+            [StronglyTypedId(Template.Guid)]
+            public readonly partial struct OrderId
+            {
+                public System.Guid Value { get; }
+
+                /// <summary>Who ordered</summary>
+                public CustomerId Customer { get; }
+
+                public string Label { get; }
+
+                public Detail Detail { get; }
+            }
+
+            public class Model { public OrderId Order { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        // The template still binds the underlying value as the bare property.
+        result.Source.Should().Contain("public global::System.Guid Order => _source.Order.Value;");
+
+        // A nested strongly typed ID unwraps through its own template.
+        result.Source.Should().Contain("public int Order_Customer => _source.Order.Customer.Value;");
+        result.Source.Should().Contain("""
+            [global::System.ComponentModel.Description("Who ordered")]
+            """.Trim());
+
+        // Simple types and object graphs behave exactly as they do anywhere else.
+        result.Source.Should().Contain("public string? Order_Label => _source.Order.Label;");
+        result.Source.Should().Contain("public global::Demo.Detail? Order_Detail => _source.Order.Detail;");
+        result.Source.Should().Contain("public int? Order_Detail_Count => _source.Order.Detail?.Count;");
+
+        // The value property is already bound as 'Order', so it is not repeated as 'Order_Value'.
+        result.Source.Should().NotContain("Order_Value");
+    }
+
+    [Fact]
+    public void Binds_nothing_extra_for_an_id_with_no_visible_members()
+    {
+        var source = Wrap("""
+            [StronglyTypedId(Template.Guid)]
+            public readonly partial struct OrderId;
+
+            public class Model { public OrderId Order { get; set; } }
+            """);
+
+        var result = TestHarness.Run(source);
+
+        result.Source.Should().Contain("public global::System.Guid Order => _source.Order.Value;");
+        result.Source.Should().NotContain("Order_");
+    }
+
+    [Fact]
     public void Warns_and_skips_a_custom_template()
     {
         var source = Wrap("""

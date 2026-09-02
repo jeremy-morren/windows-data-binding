@@ -2,9 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Nullable>enable</Nullable>
     <RootNamespace>WinDataBinding</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!--
+      This assembly ships to consumers, so it must never need a polyfill package on netstandard2.0.
+      C# 7.3 predates init, record and required, so none can be reached by accident. It also predates
+      nullable reference types (CS8630) and file-scoped namespaces, hence no Nullable and block namespaces.
+    -->
+    <LangVersion>7.3</LangVersion>
 
     <!-- Not a package of its own: the generator package embeds this assembly. -->
     <IsPackable>false</IsPackable>

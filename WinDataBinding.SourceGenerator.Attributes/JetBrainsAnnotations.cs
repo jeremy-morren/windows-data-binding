@@ -1,5 +1,10 @@
 // Annotations for JetBrains tools like ReSharper and Rider.
 // Only the annotations needed for this project are included.
+//
+// They resolve by full type name, not assembly identity, so declaring them here needs no package reference.
+// Internal, so a consumer referencing the real package does not get an ambiguous type. No Conditional
+// attribute either: the package marks these [Conditional("JETBRAINS_ANNOTATIONS")], which would drop the
+// usage at compile time and leave nothing in the assembly we ship.
 
 using System;
 
