@@ -13,6 +13,20 @@ internal static class Emitter
     private static readonly string ToolName = typeof(Emitter).Assembly.GetName().Name!;
     private static readonly string ToolVersion = typeof(Emitter).Assembly.GetName().Version!.ToString();
 
+    /// <summary>
+    /// Doc-comment warnings the generated file suppresses. A cref names a type the consuming project may not
+    /// see from here, and the comments sit outside the <c>#if</c> guarding a per-framework property; neither
+    /// is a real problem. One list drives both the comments and the pragma, so they cannot drift apart.
+    /// </summary>
+    private static readonly (string Code, string Reason)[] SuppressedWarnings =
+    [
+        ("CS1574", "XML comment has a cref attribute that could not be resolved"),
+        ("CS1584", "XML comment has a syntactically incorrect cref attribute"),
+        ("CS1581", "Invalid return type in XML comment cref attribute"),
+        ("CS1580", "Invalid type for parameter in XML comment cref attribute"),
+        ("CS1587", "XML comment is not placed on a valid language element"),
+    ];
+
     public static void Emit(SourceProductionContext context, BinderModel model)
     {
         foreach (var diagnostic in model.Diagnostics)
@@ -35,8 +49,11 @@ internal static class Emitter
         writer.Line("//     Changes to this file will be lost if the code is regenerated.");
         writer.Line("// </auto-generated>");
         writer.Line("// ReSharper disable all");
-        // A cref naming a type the consumer cannot see from here is a doc-comment warning, not a real problem.
-        writer.Line("#pragma warning disable CS1574, CS1584, CS1581, CS1580");
+
+        foreach (var (code, reason) in SuppressedWarnings)
+            writer.Line($"// {code} {reason}: https://learn.microsoft.com/dotnet/csharp/misc/{code.ToLowerInvariant()}");
+
+        writer.Line("#pragma warning disable " + string.Join(", ", SuppressedWarnings.Select(w => w.Code)));
         writer.Line("#nullable enable annotations");
         writer.Line("#nullable disable warnings");
         writer.Line();

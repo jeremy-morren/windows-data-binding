@@ -77,6 +77,9 @@ public class GenerationOptionsTests
 
         // string is a reference type, so the property is nullable.
         result.Source.Should().Contain("public string? Sku => _source.Sku.Code;");
+
+        // A string-backed custom template gets no rendered twin either, same as the built-in String.
+        result.Source.Should().NotContain("Sku_Formatted");
     }
 
     [Fact]

@@ -84,13 +84,26 @@ public class StrongIdTests
                     [global::System.ComponentModel.Description("The order")]
                     public global::System.Guid Order => _source.Order.Value;
 
+                    /// <summary><c>((global::System.IFormattable)Order.Value)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Order"/></remarks>
+                    [global::System.ComponentModel.Description("The order (Formatted)")]
+                    public string? Order_Formatted => ((global::System.IFormattable)_source.Order.Value)?.ToString(null, null);
+
                     /// <summary><c>Line.Value</c></summary>
                     /// <remarks><see cref="Demo.Model.Line"/></remarks>
                     public int Line => _source.Line.Value;
 
+                    /// <summary><c>((global::System.IFormattable)Line.Value)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Line"/></remarks>
+                    public string? Line_Formatted => ((global::System.IFormattable)_source.Line.Value)?.ToString(null, null);
+
                     /// <summary><c>Batch.Value</c></summary>
                     /// <remarks><see cref="Demo.Model.Batch"/></remarks>
                     public long Batch => _source.Batch.Value;
+
+                    /// <summary><c>((global::System.IFormattable)Batch.Value)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Batch"/></remarks>
+                    public string? Batch_Formatted => ((global::System.IFormattable)_source.Batch.Value)?.ToString(null, null);
 
                     /// <summary><c>Sku.Value</c></summary>
                     /// <remarks><see cref="Demo.Model.Sku"/></remarks>
@@ -100,6 +113,68 @@ public class StrongIdTests
             """;
 
         TestHarness.AssertGenerated(expected, source);
+    }
+
+    [Fact]
+    public void Skips_the_rendered_twin_for_a_string_backed_id()
+    {
+        // The template hands back the string verbatim, so a rendered twin of it would say nothing new.
+        // It would not compile either: string is sealed and does not implement IFormattable.
+        var source = Wrap("""
+            [StronglyTypedId(Template.String)]
+            public readonly partial struct SkuId { public string Value { get; } }
+
+            [StronglyTypedId(Template.Guid)]
+            public readonly partial struct OrderId { public System.Guid Value { get; } }
+
+            public class Model
+            {
+                public SkuId Sku { get; set; }
+                public OrderId Order { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain("public string? Sku => _source.Sku.Value;");
+        result.Source.Should().NotContain("Sku_Formatted");
+
+        // Every other template still gets one.
+        result.Source.Should().Contain("Order_Formatted");
+    }
+
+    [Fact]
+    public void Keeps_a_string_backed_id_bare_until_it_has_company()
+    {
+        var source = Wrap("""
+            [StronglyTypedId(Template.String)]
+            public readonly partial struct PlainId { public string Value { get; } }
+
+            [StronglyTypedId(Template.String)]
+            public readonly partial struct LabelledId
+            {
+                public string Value { get; }
+                public int Length { get; }
+            }
+
+            public class Model
+            {
+                public PlainId Plain { get; set; }
+                public LabelledId Labelled { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        // Alone: one bare property, no suffix and no rendered twin.
+        result.Source.Should().Contain("public string? Plain => _source.Plain.Value;");
+        result.Source.Should().NotContain("Plain_");
+
+        // With company: the value takes the suffix so it sits alongside, but still no rendered twin.
+        result.Source.Should().Contain("public string? Labelled_Value => _source.Labelled.Value;");
+        result.Source.Should().Contain("public int Labelled_Length => _source.Labelled.Length;");
+        result.Source.Should().NotContain("Labelled_Formatted");
+        result.Source.Should().NotContain("Labelled_Value_Formatted");
     }
 
     [Fact]
@@ -169,8 +244,10 @@ public class StrongIdTests
 
         result.Should().HaveNoDiagnostics();
 
-        // The template still binds the underlying value as the bare property.
-        result.Source.Should().Contain("public global::System.Guid Order => _source.Order.Value;");
+        // Sharing with members, the value takes the value-property suffix rather than the bare name.
+        result.Source.Should().Contain("public global::System.Guid Order_Value => _source.Order.Value;");
+        result.Source.Should().Contain(
+            "public string? Order_Value_Formatted => ((global::System.IFormattable)_source.Order.Value)?.ToString(null, null);");
 
         // A nested strongly typed ID unwraps through its own template.
         result.Source.Should().Contain("public int Order_Customer => _source.Order.Customer.Value;");
@@ -183,8 +260,8 @@ public class StrongIdTests
         result.Source.Should().Contain("public global::Demo.Detail? Order_Detail => _source.Order.Detail;");
         result.Source.Should().Contain("public int? Order_Detail_Count => _source.Order.Detail?.Count;");
 
-        // The value property is already bound as 'Order', so it is not repeated as 'Order_Value'.
-        result.Source.Should().NotContain("Order_Value");
+        // The value property is bound once, through the template, never again by traversal.
+        result.Source.Should().Contain("Order_Value =>").And.NotContain("Order_Value_Value");
     }
 
     [Fact]
@@ -199,8 +276,11 @@ public class StrongIdTests
 
         var result = TestHarness.Run(source);
 
+        // Standing alone, the value keeps the bare name; only its rendered twin joins it.
         result.Source.Should().Contain("public global::System.Guid Order => _source.Order.Value;");
-        result.Source.Should().NotContain("Order_");
+        result.Source.Should().Contain(
+            "public string? Order_Formatted => ((global::System.IFormattable)_source.Order.Value)?.ToString(null, null);");
+        result.Source.Should().NotContain("Order_Value");
     }
 
     [Fact]

@@ -314,7 +314,42 @@ gives
 public global::System.Guid Order => _source.Order.Value;
 ```
 
+The value also gets the usual rendered twin, because the raw value of a wrapper rarely means much on its
+own: `public string? Order_Formatted => ((IFormattable)_source.Order.Value)?.ToString(null, null);`. A
+`String`-backed ID gets none, being text already.
+
 A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
+
+#### What an ID declares itself
+
+The hand-written part of the ID struct is walked like any other graph — its generated part, the value
+property among it, stays invisible, since generators cannot see each other's output. When the ID declares
+nothing else the value keeps the bare name; when it does, the value takes the value-property suffix so it
+sits alongside them:
+
+```csharp
+[StronglyTypedId(Template.Guid)]
+public readonly partial struct OrderId
+{
+    public CustomerId Customer { get; }   // another strongly typed ID
+    public string Label { get; }          // a simple type
+    public Detail Detail { get; }         // an object graph
+}
+
+public class Model { public OrderId Order { get; set; } }
+```
+
+gives
+
+```csharp
+public global::System.Guid Order_Value  => _source.Order.Value;      // suffixed: it has company
+public string? Order_Value_Formatted    => /* rendered twin */;
+public int Order_Customer               => _source.Order.Customer.Value;
+public int? Order_Customer_Formatted    => /* rendered twin */;
+public string? Order_Label              => _source.Order.Label;
+public global::Demo.Detail? Order_Detail => _source.Order.Detail;
+public int? Order_Detail_Count          => _source.Order.Detail?.Count;
+```
 
 A **custom** template has to be described first, because the property holding the underlying value is written
 by StronglyTypedId's own generator, and generators cannot see each other's output. Describe it with
