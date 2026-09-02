@@ -4,8 +4,7 @@ using System.Text;
 namespace WinDataBinding.SourceGenerator.Internal;
 
 /// <summary>
-/// The ordered member names leading from the source type to a generated property, e.g.
-/// <c>[LastLogin, Timestamp, Value]</c> for <c>LastLogin_Timestamp_Value</c>.
+/// The ordered member names leading from the source type to a generated property.
 /// Immutable and structurally equatable.
 /// </summary>
 internal sealed class PropertyChain : IEquatable<PropertyChain>
@@ -37,9 +36,9 @@ internal sealed class PropertyChain : IEquatable<PropertyChain>
     }
 
     /// <summary>
-    /// Generates the property name for the chain at <paramref name="index"/>, on a first-come-first-served
-    /// basis: chains earlier in <paramref name="chains"/> (i.e. declared earlier) keep the shorter name, and
-    /// a later chain that would collide widens its separator by one underscore until it is unique.
+    /// Generates the property name for the chain at <paramref name="index"/>, 
+    /// on a first-come-first-served basis: chains earlier in <paramref name="chains"/> (i.e. declared earlier) keep the shorter name, 
+    /// and a later chain that would collide widens its separator by one underscore until it is unique.
     /// </summary>
     public static string GetPath(IReadOnlyList<PropertyChain> chains, int index) =>
         GetPaths(chains)[index];

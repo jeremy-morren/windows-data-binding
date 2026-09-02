@@ -53,7 +53,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class PersonModelBinder
+                partial class PersonModelBinder : global::System.IEquatable<PersonModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Person>
                 {
                     private readonly global::Demo.Person _source;
 
@@ -66,6 +66,28 @@ public class BindingModelTests
                         _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
                     }
+
+                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
+                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                    public static PersonModelBinder? Create(global::Demo.Person? source) =>
+                        source is not null ? new PersonModelBinder(source) : null;
+
+                    /// <summary>Compares this binder to another for equality.</summary>
+                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
+                    public bool Equals(PersonModelBinder? other) =>
+                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.Equals(_source, other._source);
+
+                    /// <inheritdoc/>
+                    public override bool Equals(object? obj) => obj is PersonModelBinder other && Equals(other);
+
+                    /// <inheritdoc/>
+                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.GetHashCode(_source);
+
+                    /// <summary>Compares two sources with the default comparer for their type.</summary>
+                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Person>.Equals(global::Demo.Person? x, global::Demo.Person? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.Equals(x, y);
+
+                    /// <summary>Hashes a source with the default comparer for its type.</summary>
+                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Person>.GetHashCode(global::Demo.Person obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.GetHashCode(obj);
 
                     /// <summary><c>Name</c></summary>
                     /// <remarks><see cref="Demo.Person.Name"/></remarks>
@@ -155,7 +177,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -168,6 +190,28 @@ public class BindingModelTests
                         _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
                     }
+
+                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
+                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                    public static ModelBinder? Create(global::Demo.Model? source) =>
+                        source is not null ? new ModelBinder(source) : null;
+
+                    /// <summary>Compares this binder to another for equality.</summary>
+                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
+                    public bool Equals(ModelBinder? other) =>
+                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                    /// <inheritdoc/>
+                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                    /// <inheritdoc/>
+                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                    /// <summary>Compares two sources with the default comparer for their type.</summary>
+                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
+
+                    /// <summary>Hashes a source with the default comparer for its type.</summary>
+                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>Numbers</c></summary>
                     /// <remarks><see cref="Demo.Model.Numbers"/></remarks>
@@ -262,7 +306,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -275,6 +319,28 @@ public class BindingModelTests
                         _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
                     }
+
+                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
+                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                    public static ModelBinder? Create(global::Demo.Model? source) =>
+                        source is not null ? new ModelBinder(source) : null;
+
+                    /// <summary>Compares this binder to another for equality.</summary>
+                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
+                    public bool Equals(ModelBinder? other) =>
+                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                    /// <inheritdoc/>
+                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                    /// <inheritdoc/>
+                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                    /// <summary>Compares two sources with the default comparer for their type.</summary>
+                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
+
+                    /// <summary>Hashes a source with the default comparer for its type.</summary>
+                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>First</c></summary>
                     /// <remarks><see cref="Demo.Model.First"/></remarks>
@@ -316,7 +382,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -329,6 +395,28 @@ public class BindingModelTests
                         _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
                     }
+
+                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
+                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                    internal static ModelBinder? Create(global::Demo.Model? source) =>
+                        source is not null ? new ModelBinder(source) : null;
+
+                    /// <summary>Compares this binder to another for equality.</summary>
+                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
+                    public bool Equals(ModelBinder? other) =>
+                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                    /// <inheritdoc/>
+                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                    /// <inheritdoc/>
+                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                    /// <summary>Compares two sources with the default comparer for their type.</summary>
+                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
+
+                    /// <summary>Hashes a source with the default comparer for its type.</summary>
+                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>Own</c></summary>
                     /// <remarks><see cref="Demo.Model.Own"/></remarks>
@@ -367,7 +455,7 @@ public class BindingModelTests
                 partial class Outer
                 {
                     [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                    partial class Binder
+                    partial class Binder : global::System.IEquatable<Binder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
                     {
                         private readonly global::Demo.Model _source;
 
@@ -380,6 +468,28 @@ public class BindingModelTests
                             _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
                         }
+
+                        /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
+                        [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                        public static Binder? Create(global::Demo.Model? source) =>
+                            source is not null ? new Binder(source) : null;
+
+                        /// <summary>Compares this binder to another for equality.</summary>
+                        /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
+                        public bool Equals(Binder? other) =>
+                            other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                        /// <inheritdoc/>
+                        public override bool Equals(object? obj) => obj is Binder other && Equals(other);
+
+                        /// <inheritdoc/>
+                        public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                        /// <summary>Compares two sources with the default comparer for their type.</summary>
+                        bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
+
+                        /// <summary>Hashes a source with the default comparer for its type.</summary>
+                        int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                         /// <summary><c>Value</c></summary>
                         /// <remarks><see cref="Demo.Model.Value"/></remarks>
@@ -416,7 +526,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -429,6 +539,28 @@ public class BindingModelTests
                         _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
                     }
+
+                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
+                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                    public static ModelBinder? Create(global::Demo.Model? source) =>
+                        source is not null ? new ModelBinder(source) : null;
+
+                    /// <summary>Compares this binder to another for equality.</summary>
+                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
+                    public bool Equals(ModelBinder? other) =>
+                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                    /// <inheritdoc/>
+                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                    /// <inheritdoc/>
+                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                    /// <summary>Compares two sources with the default comparer for their type.</summary>
+                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
+
+                    /// <summary>Hashes a source with the default comparer for its type.</summary>
+                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>GetSet</c></summary>
                     /// <remarks><see cref="Demo.Model.GetSet"/></remarks>

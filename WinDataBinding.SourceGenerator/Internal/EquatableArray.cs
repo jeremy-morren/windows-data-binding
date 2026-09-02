@@ -5,8 +5,7 @@ namespace WinDataBinding.SourceGenerator.Internal;
 
 /// <summary>
 /// An <see cref="ImmutableArray{T}"/> with structural equality, so pipeline models stay cacheable.
-/// <see cref="ImmutableArray{T}"/> alone compares by underlying array reference, which defeats
-/// incremental caching.
+/// <see cref="ImmutableArray{T}"/> alone compares by underlying array reference, which defeats incremental caching.
 /// </summary>
 internal readonly struct EquatableArray<T>(ImmutableArray<T> items)
     : IEquatable<EquatableArray<T>>, IReadOnlyList<T>

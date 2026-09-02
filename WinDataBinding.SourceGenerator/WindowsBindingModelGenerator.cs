@@ -5,8 +5,7 @@ using WinDataBinding.SourceGenerator.Internal;
 namespace WinDataBinding.SourceGenerator;
 
 /// <summary>
-/// Generates a flat, bindable view over a deep object graph for every class marked with
-/// <c>[GenerateWindowsBindingModel]</c>.
+/// Generates a flat, bindable view over a deep object graph for every class marked with <c>[GenerateWindowsBindingModel]</c>.
 /// </summary>
 [Generator(LanguageNames.CSharp)]
 public sealed class WindowsBindingModelGenerator : IIncrementalGenerator
@@ -18,7 +17,7 @@ public sealed class WindowsBindingModelGenerator : IIncrementalGenerator
         var models = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 AttributeName,
-                static (node, _) => node is ClassDeclarationSyntax,
+                static (node, _) => node is TypeDeclarationSyntax,
                 static (attributeContext, ct) => Parser.Parse(attributeContext, ct))
             .Where(static model => model is not null);
 

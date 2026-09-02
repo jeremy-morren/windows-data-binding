@@ -4,16 +4,16 @@ using Microsoft.CodeAnalysis;
 namespace WinDataBinding.SourceGenerator.Internal;
 
 /// <summary>
-/// Types resolved from the compilation once and reused for a whole traversal, following the approach
-/// <c>System.Text.Json</c>'s generator takes with its own <c>KnownTypeSymbols</c>. Classifying a member means
-/// walking <see cref="ITypeSymbol.AllInterfaces"/> or its attributes, which is the expensive part of the
-/// traversal and repeats constantly in a deep graph, so the answers are memoised per type.
+/// Types resolved from the compilation once and reused for a whole traversal.
+/// Classifying a member means walking <see cref="ITypeSymbol.AllInterfaces"/> or its attributes,
+/// which is the expensive part of the traversal and repeats constantly in a deep graph, so the answers are memoised per type.
+/// Same approach used by <c>System.Text.Json</c> source generator.
 /// </summary>
 /// <remarks>
 /// These symbols never enter a pipeline model: an instance is created inside the transform, never escapes it,
 /// and is dropped when it returns. That confinement is why a plain <see cref="Dictionary{TKey, TValue}"/> is
-/// safe here even though Roslyn may run generators concurrently — nothing else can reach it. Hoisting an
-/// instance into a static or a cache shared between transforms would need a concurrent collection instead.
+/// safe here even though Roslyn may run generators concurrently — nothing else can reach it. 
+/// Hoisting an instance into a static or a cache shared between transforms would need a concurrent collection instead.
 /// </remarks>
 internal sealed class KnownTypeSymbols(Compilation compilation)
 {
@@ -30,6 +30,38 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     private INamedTypeSymbol? Formattable => Resolve("System.IFormattable");
     private INamedTypeSymbol? JsonNode => Resolve("System.Text.Json.Nodes.JsonNode");
     private INamedTypeSymbol? JsonElement => Resolve("System.Text.Json.JsonElement");
+
+    /// <summary>Whether the generated code can apply JetBrains' contract annotation.</summary>
+    public bool HasContractAnnotation => IsUsable("JetBrains.Annotations.ContractAnnotationAttribute");
+
+    /// <summary>Whether the generated code can apply the BCL's conditional null annotation.</summary>
+    public bool HasNotNullIfNotNull => IsUsable("System.Diagnostics.CodeAnalysis.NotNullIfNotNullAttribute");
+
+    /// <summary>
+    /// Whether the type exists and the generated code may actually name it. 
+    /// Existing is not enough: plenty of libraries, NodaTime among them, embed their own internal copy of the JetBrains annotations, 
+    /// and those resolve by name while being inaccessible from outside.
+    /// </summary>
+    private bool IsUsable(string metadataName) =>
+        Resolve(metadataName) is { } symbol && compilation.IsSymbolAccessibleWithin(symbol, compilation.Assembly);
+
+    /// <summary>
+    /// Whether the type can order itself against its own kind, so a binder wrapping it can too.
+    /// <c>Comparer{T}.Default</c> needs exactly this and throws at runtime without it.
+    /// </summary>
+    public static bool IsComparable(ITypeSymbol type)
+    {
+        foreach (var candidate in type.AllInterfaces)
+        {
+            if (candidate.ToDisplayString(Formats.Match) != "System.IComparable") continue;
+
+            // The non-generic interface, or the generic one closed over this very type.
+            if (candidate.TypeArguments.IsDefaultOrEmpty) return true;
+            if (SymbolEqualityComparer.Default.Equals(candidate.TypeArguments[0], type)) return true;
+        }
+
+        return false;
+    }
 
     /// <summary>Whether the type is a sequence, which is bound as-is rather than traversed.</summary>
     public bool IsSequence(ITypeSymbol type) => Get(type).IsSequence;
@@ -125,9 +157,10 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
                 TemplateName(argument) is { } template)
                 return new StrongId(StrongIdKind.Template, template, ImmutableArray<string>.Empty);
 
-            // Otherwise custom templates name it. Both of the attribute's constructors take those as a
-            // 'params string[]', so the names arrive as an array argument, not as strings. A bare
-            // [StronglyTypedId] passes an empty array and so names none.
+            // Otherwise custom templates name it. 
+            // Both of the attribute's constructors take those as a 'params string[]',
+            // so the names arrive as an array argument, not as strings.
+            // A bare [StronglyTypedId] passes an empty array and so names none.
             return new StrongId(StrongIdKind.Custom, null, CustomTemplates(attribute.ConstructorArguments));
         }
 
@@ -135,8 +168,8 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     }
 
     /// <summary>
-    /// Every custom template named by the attribute, in the order given. Which of them applies depends on
-    /// the generation options, which are not known here.
+    /// Every custom template named by the attribute, in the order given. 
+    /// Which of them applies depends on the generation options, which are not known here.
     /// </summary>
     private static ImmutableArray<string> CustomTemplates(ImmutableArray<TypedConstant> arguments)
     {

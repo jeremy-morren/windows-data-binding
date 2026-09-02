@@ -2,8 +2,8 @@
 
 Binding deep objects (or non-primitive types such as `NodaTime`) types in WPF/WinForms can be tricky.
 This project provides a source generator that generates a flat model for your deep objects.
-This allows you to bind to your deep objects in WPF/WinForms without having to write a lot of boilerplate code.
-
+This allows you to bind to your deep objects in WPF/WinForms without having to write boilerplate code
+and without worrying about nullability in property chains.
 
 ## Usage
 
@@ -182,6 +182,34 @@ public int Raw => _source.Raw;
 public bool Compared => _source.Compared;
 ```
 
+## The binder
+
+The attribute goes on a `partial class` or a `partial struct`, and the generated part carries a factory
+alongside the constructor:
+
+```csharp
+[return: NotNullIfNotNull("source")]              // and [ContractAnnotation], where either is available
+public static PersonModelBinder? Create(Person? source) =>
+    source is not null ? new PersonModelBinder(source) : null;
+```
+
+A struct cannot express "no source, no binder" through a constructor at all, and for a class the factory
+saves the caller a null check either way. The annotations are only emitted when the consuming compilation can
+actually resolve them, so neither becomes a dependency. A struct binder is declared `readonly`, so reading a
+member never takes a defensive copy.
+
+The binder also mirrors how the source compares:
+
+| Interface                    | Always?                            | Delegates to                                                |
+| :--------------------------- | :--------------------------------- | :---------------------------------------------------------- |
+| `IEquatable<TBinder>`        | Yes                                | `EqualityComparer<TSource>.Default.Equals(left, right)`     |
+| `IEqualityComparer<TSource>` | Yes                                | `EqualityComparer<TSource>.Default`, implemented explicitly |
+| `IComparable<TBinder>`       | Only when the source orders itself | `Comparer<TSource>.Default.Compare`                         |
+
+`Equals(object)` and `GetHashCode` are overridden alongside `IEquatable<TBinder>`. Without them a struct
+binder would fall back to `ValueType.Equals`, which compares a struct holding a reference field by
+reflection, and the two notions of equality could disagree.
+
 ## Types
 
 A property is either *simple* — bound directly, with the object never traversed — or an *object graph*, which
@@ -314,9 +342,8 @@ gives
 public global::System.Guid Order => _source.Order.Value;
 ```
 
-The value also gets the usual rendered twin, because the raw value of a wrapper rarely means much on its
-own: `public string? Order_Formatted => ((IFormattable)_source.Order.Value)?.ToString(null, null);`. A
-`String`-backed ID gets none, being text already.
+The value also gets the usual rendered twin, except for `TemplateId.String` (which just returns `Value`):
+`public string? Order_Formatted => ((IFormattable)_source.Order.Value)?.ToString(null, null);`.
 
 A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
 
@@ -386,7 +413,11 @@ need not derive from anything and is never instantiated — only its attributes 
 base types are read too, with the most derived declaration of a template name winning, and attributes the
 generator does not understand are ignored.
 
-| Attribute                        | Purpose                                                                                                                                                           |
-| :------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `StrongIdTemplateSetupAttribute` | Describes a custom `StronglyTypedId` template: the template name to match, the type of the underlying value, and the name of the property holding it. Repeatable. |
+| Attribute                        | Purpose                                                                                                                                                                                                        |
+| :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `StrongIdTemplateSetupAttribute` | Describes a custom `StronglyTypedId` template: the template name to match, the type of the underlying value, the name of the property holding it, and optionally `isFormattable` (default `true`). Repeatable. |
+
+`isFormattable` says whether **the ID struct** implements `IFormattable`. That cannot be checked here: the
+interface is declared by StronglyTypedId's own generator, and generators cannot see each other's output. Pass
+`false` and no rendered twin is emitted; leave it and the twin renders the ID itself.
 

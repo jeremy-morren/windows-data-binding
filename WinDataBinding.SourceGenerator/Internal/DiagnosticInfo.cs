@@ -4,8 +4,8 @@ using Microsoft.CodeAnalysis.Text;
 namespace WinDataBinding.SourceGenerator.Internal;
 
 /// <summary>
-/// A <see cref="Location"/> reduced to equatable data. <see cref="Location"/> itself must never enter a
-/// pipeline model: it holds a <see cref="SyntaxTree"/> and breaks equality on every edit.
+/// A <see cref="Location"/> reduced to equatable data. 
+/// <see cref="Location"/> itself must never enter a pipeline model: it holds a <see cref="SyntaxTree"/> and breaks equality on every edit.
 /// </summary>
 internal sealed record LocationInfo(string FilePath, TextSpan Span, LinePositionSpan LineSpan)
 {
@@ -43,14 +43,14 @@ internal static class Diagnostics
 
     public static readonly DiagnosticDescriptor NotPartial = new(
         "WGD002",
-        "Binding model class must be partial",
-        "Class '{0}' is marked with [GenerateWindowsBindingModel] and must be declared 'partial'",
+        "Binding model type must be partial",
+        "The {0} '{1}' is marked with [GenerateWindowsBindingModel] and must be declared 'partial'",
         Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public static readonly DiagnosticDescriptor GenericType = new(
         "WGD003",
         "Generic types are not supported",
-        "Type '{0}' is generic; [GenerateWindowsBindingModel] supports neither generic binding model classes nor generic source types",
+        "The type '{0}' is generic; [GenerateWindowsBindingModel] supports neither generic binding model types nor generic source types",
         Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
     public static readonly DiagnosticDescriptor CustomStrongIdTemplate = new(
@@ -64,6 +64,6 @@ internal static class Diagnostics
     public static readonly DiagnosticDescriptor ContainingTypeNotPartial = new(
         "WGD004",
         "Containing type must be partial",
-        "Class '{0}' encloses a binding model class and must be declared 'partial'",
+        "The {0} '{1}' encloses a binding model and must be declared 'partial'",
         Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 }

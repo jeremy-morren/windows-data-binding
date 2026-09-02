@@ -1,8 +1,8 @@
 namespace WinDataBinding.SourceGenerator.Internal;
 
 /// <summary>
-/// One generated property. When <see cref="TypePre6"/> is set the property is emitted twice, under
-/// <c>#if NET6_0_OR_GREATER</c>, because its type only exists on NET6+.
+/// One generated property. When <see cref="TypePre6"/> is set the property is emitted twice, 
+/// under <c>#if NET6_0_OR_GREATER</c>, because its type only exists on NET6+.
 /// </summary>
 internal sealed record GeneratedProperty(
     string Name,
@@ -19,9 +19,14 @@ internal sealed record GeneratedProperty(
 internal sealed record BinderModel(
     string? Namespace,
     EquatableArray<string> ContainingTypes,
+    string Keyword,
     string ClassName,
     string SourceType,
+    bool SourceIsReference,
+    bool SourceIsComparable,
     string CtorAccessibility,
     string HintName,
+    bool ContractAnnotation,
+    bool NotNullIfNotNull,
     EquatableArray<GeneratedProperty> Properties,
     EquatableArray<DiagnosticInfo> Diagnostics);

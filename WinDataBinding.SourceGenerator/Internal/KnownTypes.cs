@@ -3,12 +3,12 @@ using static WinDataBinding.SourceGenerator.Internal.Conversions;
 namespace WinDataBinding.SourceGenerator.Internal;
 
 /// <summary>
-/// The type table: which types are bound directly, and which need converting first. Types are matched by
-/// namespace-qualified name, so no reference to NodaTime is required.
+/// The type table: which types are bound directly, and which need converting first. 
+/// Types are matched by namespace-qualified name, so no reference to e.g. NodaTime is required.
 /// </summary>
 /// <remarks>
-/// Both tables are built once by the type initialiser and never written to afterwards, so the concurrent
-/// reads Roslyn may make of them need no synchronisation. Keep them read-only.
+/// Both tables are built once by the type initialiser and never written to afterwards, 
+/// so the concurrent reads Roslyn may make of them need no synchronisation. Keep them read-only.
 /// </remarks>
 internal static class KnownTypes
 {
@@ -27,11 +27,14 @@ internal static class KnownTypes
 
     private static readonly Dictionary<string, Conversion[]> ConversionsByType = new(StringComparer.Ordinal)
     {
+        // Common
         ["System.TimeZoneInfo"] =
         [
             Tail("Id", "string", "Id", isReference: true),
             Tail("DisplayName", "string", "DisplayName", isReference: true),
         ],
+
+        // NodaTime
         ["NodaTime.DateTimeZone"] = [Tail(null, "string", "Id", isReference: true)],
         ["NodaTime.Instant"] = [Tail(null, "global::System.DateTime", "ToDateTimeUtc()")],
         ["NodaTime.OffsetDateTime"] = [Tail(null, "global::System.DateTimeOffset", "ToDateTimeOffset()")],
@@ -64,9 +67,9 @@ internal static class KnownTypes
     };
 
     /// <summary>
-    /// The four built-in StronglyTypedId templates. The underlying type comes from the template rather than
-    /// from the struct's own Value member: that member is written by another source generator, and generators
-    /// cannot see each other's output.
+    /// The four built-in StronglyTypedId templates. 
+    /// The underlying type comes from the template rather than from the struct's own Value member: 
+    /// that member is written by another source generator, and generators cannot see each other's output.
     /// </summary>
     private static readonly Dictionary<string, StrongIdBinding> StrongIdTemplates = new(StringComparer.Ordinal)
     {
@@ -78,8 +81,7 @@ internal static class KnownTypes
     };
 
     /// <summary>
-    /// Renders a whole value as text. <c>JsonElement</c> has no <c>ToJsonString()</c>; <c>GetRawText()</c> is
-    /// its equivalent.
+    /// Renders a whole value as text: <c>IFormattable</c>, <c>JsonNode</c>, or <c>JsonElement</c>.
     /// </summary>
     public static string RenderValue(Renderer renderer, string safe, string accessor) => renderer switch
     {

@@ -21,7 +21,7 @@ public class DiagnosticTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -34,6 +34,28 @@ public class DiagnosticTests
                         _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
                     }
+
+                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
+                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                    public static ModelBinder? Create(global::Demo.Model? source) =>
+                        source is not null ? new ModelBinder(source) : null;
+
+                    /// <summary>Compares this binder to another for equality.</summary>
+                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
+                    public bool Equals(ModelBinder? other) =>
+                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                    /// <inheritdoc/>
+                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                    /// <inheritdoc/>
+                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                    /// <summary>Compares two sources with the default comparer for their type.</summary>
+                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
+
+                    /// <summary>Hashes a source with the default comparer for its type.</summary>
+                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>Node</c></summary>
                     /// <remarks><see cref="Demo.Model.Node"/></remarks>
@@ -107,6 +129,62 @@ public class DiagnosticTests
 
         TestHarness.AssertDiagnostic(result, "WGD004", DiagnosticSeverity.Error);
         Assert.Empty(result.Source);
+    }
+
+    [Fact]
+    public void Names_the_kind_of_type_that_is_not_partial()
+    {
+        var classSource = """
+            using WinDataBinding;
+
+            namespace Demo;
+
+            public class Model { public int Value { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model))]
+            public sealed class ClassBinder { }
+            """;
+
+        var structSource = """
+            using WinDataBinding;
+
+            namespace Demo;
+
+            public class Model { public int Value { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model))]
+            public readonly struct StructBinder { }
+            """;
+
+        TestHarness.Run(classSource).GeneratorDiagnostics
+            .Should().ContainSingle(d => d.Id == "WGD002")
+            .Which.GetMessage().Should().Contain("The class 'ClassBinder'");
+
+        TestHarness.Run(structSource).GeneratorDiagnostics
+            .Should().ContainSingle(d => d.Id == "WGD002")
+            .Which.GetMessage().Should().Contain("The struct 'StructBinder'");
+    }
+
+    [Fact]
+    public void Names_the_kind_of_containing_type_that_is_not_partial()
+    {
+        var source = """
+            using WinDataBinding;
+
+            namespace Demo;
+
+            public class Model { public int Value { get; set; } }
+
+            public struct Outer
+            {
+                [GenerateWindowsBindingModel(typeof(Model))]
+                public sealed partial class Binder { }
+            }
+            """;
+
+        TestHarness.Run(source).GeneratorDiagnostics
+            .Should().ContainSingle(d => d.Id == "WGD004")
+            .Which.GetMessage().Should().Contain("The struct 'Outer'");
     }
 
     [Fact]

@@ -21,20 +21,7 @@ namespace WinDataBinding
         /// <param name="templateName">The template name, as passed to <c>[StronglyTypedId]</c>.</param>
         /// <param name="valueType">The type of the underlying value.</param>
         /// <param name="propertyName">The name of the property holding the underlying value.</param>
-        public StrongIdTemplateSetupAttribute(string templateName, Type valueType, string propertyName)
-        {
-            TemplateName = templateName;
-            ValueType = valueType;
-            PropertyName = propertyName;
-        }
-
-        /// <summary>The template name, as passed to <c>[StronglyTypedId]</c>.</summary>
-        public string TemplateName { get; }
-
-        /// <summary>The type of the underlying value.</summary>
-        public Type ValueType { get; }
-
-        /// <summary>The name of the property holding the underlying value.</summary>
-        public string PropertyName { get; }
+        /// <param name="isFormattable">Indicates whether the Strong ID template implements <c>IFormattable</c>.</param>
+        public StrongIdTemplateSetupAttribute(string templateName, Type valueType, string propertyName, bool isFormattable = true) {}
     }
 }

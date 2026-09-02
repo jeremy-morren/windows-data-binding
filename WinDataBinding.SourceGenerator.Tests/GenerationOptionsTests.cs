@@ -35,7 +35,11 @@ public class GenerationOptionsTests
             public class BindingOptions;
 
             [StronglyTypedId("my-guid")]
-            public readonly partial struct OrderId { public System.Guid Value { get; } }
+            public readonly partial struct OrderId : System.IFormattable
+            {
+                public System.Guid Value { get; }
+                public string ToString(string format, System.IFormatProvider provider) => "";
+            }
 
             public class Model
             {
@@ -65,7 +69,11 @@ public class GenerationOptionsTests
             public class BindingOptions;
 
             [StronglyTypedId("my-code")]
-            public readonly partial struct SkuId { public string Code { get; } }
+            public readonly partial struct SkuId : System.IFormattable
+            {
+                public string Code { get; }
+                public string ToString(string format, System.IFormatProvider provider) => "";
+            }
 
             public class Model { public SkuId Sku { get; set; } }
 
@@ -78,18 +86,100 @@ public class GenerationOptionsTests
         // string is a reference type, so the property is nullable.
         result.Source.Should().Contain("public string? Sku => _source.Sku.Code;");
 
-        // A string-backed custom template gets no rendered twin either, same as the built-in String.
-        result.Source.Should().NotContain("Sku_Formatted");
+        // isFormattable describes the ID, not the value, so the twin renders the ID itself even though
+        // the underlying value is already text.
+        result.Source.Should().Contain(
+            "public string? Sku_Formatted => ((global::System.IFormattable)_source.Sku)?.ToString(null, null);");
+    }
+
+    [Fact]
+    public void Defaults_isFormattable_to_true_when_it_is_not_passed()
+    {
+        var source = Wrap("""
+            [StrongIdTemplateSetup("my-guid", typeof(System.Guid), "Value")]
+            public class BindingOptions;
+
+            [StronglyTypedId("my-guid")]
+            public readonly partial struct OrderId : System.IFormattable
+            {
+                public System.Guid Value { get; }
+                public string ToString(string format, System.IFormatProvider provider) => "";
+            }
+
+            public class Model { public OrderId Order { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder { }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+        result.Source.Should().Contain(
+            "public string? Order_Formatted => ((global::System.IFormattable)_source.Order)?.ToString(null, null);");
+    }
+
+    [Fact]
+    public void Emits_the_twin_when_isFormattable_is_passed_as_true()
+    {
+        var source = Wrap("""
+            [StrongIdTemplateSetup("my-guid", typeof(System.Guid), "Value", true)]
+            public class BindingOptions;
+
+            [StronglyTypedId("my-guid")]
+            public readonly partial struct OrderId : System.IFormattable
+            {
+                public System.Guid Value { get; }
+                public string ToString(string format, System.IFormatProvider provider) => "";
+            }
+
+            public class Model { public OrderId Order { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder { }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+        result.Source.Should().Contain("public global::System.Guid Order => _source.Order.Value;");
+        result.Source.Should().Contain(
+            "public string? Order_Formatted => ((global::System.IFormattable)_source.Order)?.ToString(null, null);");
+    }
+
+    [Fact]
+    public void Omits_the_twin_when_isFormattable_is_passed_as_false()
+    {
+        // The ID does not implement IFormattable, so the twin would not even compile. Declaring it is the
+        // only way the generator can know: that part of the struct is written by another generator.
+        var source = Wrap("""
+            [StrongIdTemplateSetup("my-guid", typeof(System.Guid), "Value", false)]
+            public class BindingOptions;
+
+            [StronglyTypedId("my-guid")]
+            public readonly partial struct OrderId { public System.Guid Value { get; } }
+
+            public class Model { public OrderId Order { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder { }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+        result.Source.Should().Contain("public global::System.Guid Order => _source.Order.Value;");
+        result.Source.Should().NotContain("Order_Formatted");
     }
 
     [Fact]
     public void Reads_setup_attributes_from_the_options_base_types()
     {
         var source = Wrap("""
-            [StrongIdTemplateSetup("from-base", typeof(long), "Value")]
+            [StrongIdTemplateSetup("from-base", typeof(long), "Value", false)]
             public class SharedOptions;
 
-            [StrongIdTemplateSetup("from-derived", typeof(int), "Value")]
+            [StrongIdTemplateSetup("from-derived", typeof(int), "Value", false)]
             public class BindingOptions : SharedOptions;
 
             [StronglyTypedId("from-base")]
@@ -119,7 +209,7 @@ public class GenerationOptionsTests
     public void Picks_the_only_named_template_that_is_described()
     {
         var source = Wrap("""
-            [StrongIdTemplateSetup("Template1", typeof(int), "Value")]
+            [StrongIdTemplateSetup("Template1", typeof(int), "Value", false)]
             public class BindingOptions;
 
             [StronglyTypedId("Template2", "Template1")]
@@ -142,8 +232,8 @@ public class GenerationOptionsTests
     {
         // One configuration per ID: the order the ID names them decides, not the order they are set up.
         var source = Wrap("""
-            [StrongIdTemplateSetup("Template1", typeof(int), "Value")]
-            [StrongIdTemplateSetup("Template2", typeof(long), "Other")]
+            [StrongIdTemplateSetup("Template1", typeof(int), "Value", false)]
+            [StrongIdTemplateSetup("Template2", typeof(long), "Other", false)]
             public class BindingOptions;
 
             [StronglyTypedId("Template2", "Template1")]
@@ -173,7 +263,7 @@ public class GenerationOptionsTests
     {
         // Case differs, so nothing matches and the property is skipped.
         var source = Wrap("""
-            [StrongIdTemplateSetup("template1", typeof(int), "Value")]
+            [StrongIdTemplateSetup("template1", typeof(int), "Value", false)]
             public class BindingOptions;
 
             [StronglyTypedId("Template1")]
@@ -195,7 +285,7 @@ public class GenerationOptionsTests
     public void Prefers_a_built_in_template_over_the_custom_ones_beside_it()
     {
         var source = Wrap("""
-            [StrongIdTemplateSetup("OtherTemplate", typeof(int), "Value")]
+            [StrongIdTemplateSetup("OtherTemplate", typeof(int), "Value", false)]
             public class BindingOptions;
 
             [StronglyTypedId(Template.String, "OtherTemplate")]
@@ -220,7 +310,7 @@ public class GenerationOptionsTests
     public void Still_warns_for_a_custom_template_with_no_setup()
     {
         var source = Wrap("""
-            [StrongIdTemplateSetup("declared", typeof(int), "Value")]
+            [StrongIdTemplateSetup("declared", typeof(int), "Value", false)]
             public class BindingOptions;
 
             [StronglyTypedId("undeclared")]
@@ -243,7 +333,7 @@ public class GenerationOptionsTests
     {
         var source = Wrap("""
             [System.Obsolete]
-            [StrongIdTemplateSetup("my-int", typeof(int), "Value")]
+            [StrongIdTemplateSetup("my-int", typeof(int), "Value", false)]
             public class BindingOptions;
 
             [StronglyTypedId("my-int")]

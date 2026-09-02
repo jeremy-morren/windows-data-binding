@@ -10,13 +10,20 @@ namespace WinDataBinding.SourceGenerator.Internal;
 /// <summary>Writes the generated source for one <see cref="BinderModel"/>.</summary>
 internal static class Emitter
 {
+    private const string Comparer = "global::System.Collections.Generic.IEqualityComparer";
+
     private static readonly string ToolName = typeof(Emitter).Assembly.GetName().Name!;
     private static readonly string ToolVersion = typeof(Emitter).Assembly.GetName().Version!.ToString();
 
     /// <summary>
-    /// Doc-comment warnings the generated file suppresses. A cref names a type the consuming project may not
-    /// see from here, and the comments sit outside the <c>#if</c> guarding a per-framework property; neither
-    /// is a real problem. One list drives both the comments and the pragma, so they cannot drift apart.
+    /// Doc-comment warnings the generated file suppresses. 
+    /// 
+    /// A cref names a type the consuming project may not see from here, 
+    /// and the comments sit outside the <c>#if</c> guarding a per-framework property; 
+    /// neither is a real problem. One list drives both the comments and the pragma, so they cannot drift apart.
+    /// 
+    /// CS1587: our complicated if defs for per-framework properties confuse the analyzer (but not the compiler),
+    /// so we can suppress it.
     /// </summary>
     private static readonly (string Code, string Reason)[] SuppressedWarnings =
     [
@@ -66,12 +73,23 @@ internal static class Emitter
 
         foreach (var containing in model.ContainingTypes)
         {
-            writer.Line("partial class " + containing);
+            writer.Line("partial " + containing);
             writer.OpenBrace();
         }
 
         writer.Line($"[global::System.CodeDom.Compiler.GeneratedCode(\"{ToolName}\", \"{ToolVersion}\")]");
-        writer.Line("partial class " + model.ClassName);
+
+        // A readonly struct is free of the defensive copies an ordinary one would take on every member read.
+        var declaration = model.Keyword == "struct" ? "readonly partial struct" : $"partial {model.Keyword}";
+
+        var interfaces = new List<string>
+        {
+            $"global::System.IEquatable<{model.ClassName}>",
+            $"{Comparer}<{model.SourceType}>",
+        };
+        if (model.SourceIsComparable) interfaces.Add($"global::System.IComparable<{model.ClassName}>");
+
+        writer.Line($"{declaration} {model.ClassName} : {string.Join(", ", interfaces)}");
         writer.OpenBrace();
 
         writer.Line($"private readonly {model.SourceType} _source;");
@@ -86,6 +104,11 @@ internal static class Emitter
         writer.Raw("#endif");
         writer.CloseBrace();
 
+        WriteFactory(writer, model);
+        WriteEquality(writer, model);
+        WriteComparer(writer, model);
+        WriteComparable(writer, model);
+
         foreach (var property in model.Properties)
         {
             writer.Line();
@@ -98,6 +121,103 @@ internal static class Emitter
         if (model.Namespace is not null) writer.CloseBrace();
 
         return writer.ToString();
+    }
+
+    /// <summary>
+    /// A factory that maps a null source to a null binder. 
+    /// A struct cannot express that through its constructor at all, and for a class it saves the caller a null check either way.
+    /// </summary>
+    private static void WriteFactory(Writer writer, BinderModel model)
+    {
+        writer.Line();
+        writer.Line($"/// <summary>Wraps <paramref name=\"source\"/>, or returns null when it is null.</summary>");
+
+        if (model.ContractAnnotation)
+            writer.Line("[global::JetBrains.Annotations.ContractAnnotation(\"null => null; notnull => notnull\")]");
+
+        if (model.NotNullIfNotNull)
+            writer.Line("[return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull(\"source\")]");
+
+        writer.Line($"{model.CtorAccessibility} static {model.ClassName}? Create({model.SourceType}? source) =>");
+        writer.Line($"    source is not null ? new {model.ClassName}(source) : null;");
+    }
+
+    /// <summary>
+    /// Equality between binders, which is equality between the sources they wrap. 
+    /// The object overrides come with it: without them a struct binder would fall back to ValueType.Equals, 
+    /// which compares a struct holding a reference field by reflection, and the two notions of equality could disagree.
+    /// </summary>
+    private static void WriteEquality(Writer writer, BinderModel model)
+    {
+        var equality = $"global::System.Collections.Generic.EqualityComparer<{model.SourceType}>.Default";
+        var other = model.Keyword == "struct" ? model.ClassName : model.ClassName + "?";
+        var guard = model.Keyword == "struct" ? "" : "other is not null && ";
+
+        writer.Line();
+        writer.Line("/// <summary>Compares this binder to another for equality.</summary>");
+        writer.Line("/// <remarks>Two binders are equal when the sources they wrap are.</remarks>");
+        writer.Line($"public bool Equals({other} other) =>");
+        writer.Line($"    {guard}{equality}.Equals(_source, other._source);");
+
+        writer.Line();
+        writer.Line("/// <inheritdoc/>");
+        writer.Line($"public override bool Equals(object? obj) => obj is {model.ClassName} other && Equals(other);");
+
+        writer.Line();
+        writer.Line("/// <inheritdoc/>");
+
+        // A default struct binder has no source at all, and the default comparer will not hash null.
+        var hash = model.SourceIsReference
+            ? $"_source is null ? 0 : {equality}.GetHashCode(_source)"
+            : $"{equality}.GetHashCode(_source)";
+
+        writer.Line($"public override int GetHashCode() => {hash};");
+    }
+
+    /// <summary>
+    /// Comparison of two sources, handed straight to the default comparer for the type.
+    /// </summary>
+    private static void WriteComparer(Writer writer, BinderModel model)
+    {
+        var source = model.SourceType;
+        var nullable = model.SourceIsReference ? source + "?" : source;
+        var equality = $"global::System.Collections.Generic.EqualityComparer<{source}>.Default";
+
+        // Implemented explicitly. 
+        // A public method taking the source type would not compile when the source is less accessible than the binder,
+        // and Equals(TSource, TSource) beside object.Equals invites being called by mistake.
+        var self = $"{Comparer}<{source}>";
+
+        writer.Line();
+        writer.Line("/// <summary>Compares two sources with the default comparer for their type.</summary>");
+        writer.Line($"bool {self}.Equals({nullable} x, {nullable} y) => {equality}.Equals(x, y);");
+
+        writer.Line();
+        writer.Line("/// <summary>Hashes a source with the default comparer for its type.</summary>");
+        writer.Line($"int {self}.GetHashCode({source} obj) => {equality}.GetHashCode(obj);");
+    }
+
+    /// <summary>Ordering, mirrored from the source: a binder sorts however the thing it wraps sorts.</summary>
+    private static void WriteComparable(Writer writer, BinderModel model)
+    {
+        if (!model.SourceIsComparable) return;
+
+        var ordering = $"global::System.Collections.Generic.Comparer<{model.SourceType}>.Default";
+
+        writer.Line();
+        writer.Line("/// <summary>Orders by the source, using the default comparer for its type.</summary>");
+
+        if (model.Keyword == "struct")
+        {
+            writer.Line($"public int CompareTo({model.ClassName} other) =>");
+            writer.Line($"    {ordering}.Compare(_source, other._source);");
+        }
+        else
+        {
+            // Sorting a list of binders puts the nulls first, as the default comparer would.
+            writer.Line($"public int CompareTo({model.ClassName}? other) =>");
+            writer.Line($"    other is null ? 1 : {ordering}.Compare(_source, other._source);");
+        }
     }
 
     private static void WriteProperty(Writer writer, GeneratedProperty property)
@@ -142,8 +262,8 @@ internal static class Emitter
     }
 
     /// <summary>
-    /// Escapes text destined for an XML doc comment. Guarded expressions contain '&amp;&amp;', and rendered
-    /// sequences contain quotes, which are legal unescaped in element content.
+    /// Escapes text destined for an XML doc comment. 
+    /// Guarded expressions contain '&amp;&amp;', and rendered sequences contain quotes, which are legal unescaped in element content.
     /// </summary>
     private static string Xml(string text) => new XText(text).ToString();
 

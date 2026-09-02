@@ -1,4 +1,5 @@
 // Compiler-required attributes that netstandard2.0 does not ship.
+
 // ReSharper disable once CheckNamespace
 namespace System.Runtime.CompilerServices;
 

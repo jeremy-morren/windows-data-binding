@@ -29,6 +29,11 @@ internal readonly record struct StrongId(
 /// <param name="ValueType">Fully qualified type of the value.</param>
 /// <param name="IsReference">Whether that type is a reference type, so the property is always nullable.</param>
 /// <param name="PropertyName">The property holding the value.</param>
-/// <param name="Renderer">How that value renders as text, for the twin property.</param>
+/// <param name="Renderer">How the twin property renders as text, or None for no twin.</param>
+/// <param name="RendersSelf">
+/// Whether the twin renders the ID itself rather than its underlying value. 
+/// True for a custom template, whose struct is declared formattable by its setup: the generated part is invisible here, 
+/// but the consuming compilation sees it, so the cast resolves there.
+/// </param>
 internal readonly record struct StrongIdBinding(
-    string ValueType, bool IsReference, string PropertyName, Renderer Renderer);
+    string ValueType, bool IsReference, string PropertyName, Renderer Renderer, bool RendersSelf = false);

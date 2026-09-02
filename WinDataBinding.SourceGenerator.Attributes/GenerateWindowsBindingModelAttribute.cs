@@ -9,7 +9,7 @@ namespace WinDataBinding
     /// Properties will be generated as get-only properties that return
     /// the corresponding property values from the specified model type.
     /// </remarks>
-    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
     [JetBrains.Annotations.MeansImplicitUse(JetBrains.Annotations.ImplicitUseTargetFlags.WithMembers)]
     public sealed class GenerateWindowsBindingModelAttribute : Attribute
     {

@@ -9,15 +9,15 @@ using Access = Microsoft.CodeAnalysis.Accessibility;
 namespace WinDataBinding.SourceGenerator.Internal;
 
 /// <summary>
-/// Turns the attributed class and its source type into a <see cref="BinderModel"/>. All symbol work happens
-/// here so the pipeline only ever carries equatable data.
+/// Turns the attributed class and its source type into a <see cref="BinderModel"/>. 
+/// All symbol work happens here so the pipeline only ever carries equatable data.
 /// </summary>
 internal static class Parser
 {
     public static BinderModel? Parse(GeneratorAttributeSyntaxContext context, CancellationToken ct)
     {
         if (context.TargetSymbol is not INamedTypeSymbol binder ||
-            context.TargetNode is not ClassDeclarationSyntax declaration ||
+            context.TargetNode is not TypeDeclarationSyntax declaration ||
             context.Attributes.Length == 0)
             return null;
 
@@ -35,8 +35,10 @@ internal static class Parser
         var location = LocationInfo.From(declaration.Identifier.GetLocation());
         var diagnostics = new List<DiagnosticInfo>();
 
+        // The message names whatever was actually decorated: a class, a struct, a record.
         if (!declaration.Modifiers.Any(SyntaxKind.PartialKeyword))
-            diagnostics.Add(DiagnosticInfo.Create(Diagnostics.NotPartial, location, binder.Name));
+            diagnostics.Add(DiagnosticInfo.Create(
+                Diagnostics.NotPartial, location, declaration.Keyword.ValueText, binder.Name));
 
         // Every enclosing type has to be partial too, or the generated nesting will not compile.
         var containingTypes = new List<string>();
@@ -46,8 +48,9 @@ internal static class Parser
         {
             if (!parent.Modifiers.Any(SyntaxKind.PartialKeyword))
                 diagnostics.Add(DiagnosticInfo.Create(Diagnostics.ContainingTypeNotPartial,
-                    LocationInfo.From(parent.Identifier.GetLocation()), parent.Identifier.Text));
-            containingTypes.Insert(0, parent.Identifier.Text);
+                    LocationInfo.From(parent.Identifier.GetLocation()),
+                    parent.Keyword.ValueText, parent.Identifier.Text));
+            containingTypes.Insert(0, parent.Keyword.ValueText + " " + parent.Identifier.Text);
         }
 
         if (binder.IsGenericType)
@@ -66,10 +69,15 @@ internal static class Parser
         return new BinderModel(
             ns,
             EquatableArray.Create(containingTypes),
+            declaration.Keyword.ValueText,
             binder.Name,
             sourceType.ToDisplayString(Formats.Type),
+            sourceType.IsReferenceType,
+            KnownTypeSymbols.IsComparable(sourceType),
             Accessibility(sourceType.DeclaredAccessibility),
             HintName(ns, containingTypes, binder.Name),
+            known.HasContractAnnotation,
+            known.HasNotNullIfNotNull,
             new EquatableArray<GeneratedProperty>(properties),
             EquatableArray.Create(diagnostics));
     }
@@ -111,8 +119,8 @@ internal static class Parser
     private const string SiblingPlaceholder = "$sibling$";
 
     /// <param name="SiblingIndex">
-    /// Index of the candidate whose resolved name replaces <see cref="SiblingPlaceholder"/> in
-    /// <paramref name="Expression"/>, or -1 when the expression stands alone.
+    /// Index of the candidate whose resolved name replaces <see cref="SiblingPlaceholder"/> in <paramref name="Expression"/>, 
+    /// or -1 when the expression stands alone.
     /// </param>
     private sealed record Candidate(
         PropertyChain Chain,
@@ -219,8 +227,9 @@ internal static class Parser
                     continue;
                 }
 
-                // Whatever the ID declares in source binds too. Its generated members, the value property
-                // among them, are invisible to us, so only what is statically there is reachable here.
+                // Whatever the ID declares in source binds too.
+                // Its generated members, the value property among them, are invisible to us, 
+                // so only what is statically there is reachable here.
                 var id = underlying as INamedTypeSymbol;
                 var walk = id is not null && !visited.Contains(id);
                 var alone = !walk || !HasMembersBesides(id!, binding.PropertyName);
@@ -266,21 +275,22 @@ internal static class Parser
     }
 
     /// <summary>
-    /// The rendered twin of a strongly typed ID's value. Unlike other leaf values, an ID gets one: the point
-    /// of the wrapper is that the raw value rarely means anything on its own.
+    /// The rendered twin of a strongly typed ID's value. 
+    /// Unlike other leaf values, an ID gets one: the point of the wrapper is that the raw value rarely means anything on its own.
     /// </summary>
     private static void AddStrongIdFormatted(
         Path path, StrongIdBinding binding, string? suffix, List<Candidate> candidates)
     {
         if (binding.Renderer == Renderer.None) return;
 
-        var value = path.Safe + path.Accessor + binding.PropertyName;
+        var target = binding.RendersSelf ? path.Safe : path.Safe + path.Accessor + binding.PropertyName;
+        var accessor = binding.RendersSelf ? path.Accessor : binding.IsReference ? "?." : ".";
         var chain = suffix is null ? path.Chain : path.Chain.Add(suffix);
 
         candidates.Add(new Candidate(
             chain.Add("Formatted"),
             "string?",
-            KnownTypes.RenderValue(binding.Renderer, value, binding.IsReference ? "?." : "."),
+            KnownTypes.RenderValue(binding.Renderer, target, accessor),
             null,
             null,
             path.Remarks,
@@ -303,8 +313,8 @@ internal static class Parser
     }
 
     /// <summary>
-    /// Appends the rendered form of a member that can format itself, after everything else that member
-    /// produced. Leaf types and enums are left alone: a grid already renders those.
+    /// Appends the rendered form of a member that can format itself, after everything else that member produced. 
+    /// Leaf types and enums are left alone: a grid already renders those.
     /// </summary>
     private static void AddFormatted(Path path, Renderer renderer, List<Candidate> candidates)
     {
@@ -426,8 +436,8 @@ internal static class Parser
     }
 
     /// <summary>
-    /// Reads a member's summary as a documentation viewer would show it: inner text only, entities decoded,
-    /// whitespace collapsed. An <c>&lt;inheritdoc/&gt;</c> is followed to whatever it inherits from, repeatedly.
+    /// Reads a member's summary as a documentation viewer would show it: inner text only, entities decoded, whitespace collapsed. 
+    /// An <c>&lt;inheritdoc/&gt;</c> is followed to whatever it inherits from, repeatedly.
     /// </summary>
     private static string Summary(ISymbol member, KnownTypeSymbols known)
     {
