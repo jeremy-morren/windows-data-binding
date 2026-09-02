@@ -123,6 +123,9 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     /// <summary>How a sequence's elements render as text.</summary>
     public Renderer GetElementRenderer(ITypeSymbol type) => Get(type).ElementRenderer;
 
+    /// <summary>How to read the number of items the type holds.</summary>
+    public CountAccess GetCount(ITypeSymbol type) => Get(type).Count;
+
     /// <summary>Whether the type is a strongly typed ID, and if so which template declared it.</summary>
     public StrongId GetStrongId(ITypeSymbol type)
     {
@@ -161,18 +164,21 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
             return new TypeTraits(false, json, Renderer.None);
 
         if (ElementType(type) is { } element)
-            return new TypeTraits(true, Renderer.None, RendererFor(element));
+            return new TypeTraits(true, Renderer.None, RendererFor(element), CountAccessFor(type));
 
         return new TypeTraits(false, RendererFor(type), Renderer.None);
     }
 
     private Renderer RendererFor(ITypeSymbol type)
     {
+        // Only reached for a sequence's elements; a string property itself is a leaf and never gets here.
+        if (type.SpecialType == SpecialType.System_String) return Renderer.Text;
+
         if (JsonRenderer(type) is var json && json != Renderer.None) return json;
 
-        return Formattable is { } formattable && Implements(type, formattable)
-            ? Renderer.Formattable
-            : Renderer.None;
+        if (Formattable is not { } formattable || !Implements(type, formattable)) return Renderer.None;
+
+        return Offers(type, FormatsItself) ? Renderer.FormattableDirect : Renderer.FormattableByCast;
     }
 
     private Renderer JsonRenderer(ITypeSymbol type)
@@ -256,6 +262,105 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
                 return field.Name;
 
         return null;
+    }
+
+    /// <summary>
+    /// How many items the type holds, read the way the type actually spells it.
+    /// <c>IReadOnlyDictionary{TKey, TValue}</c> needs no check of its own: it derives from
+    /// <c>IReadOnlyCollection{T}</c> of its pairs, so implementing one implements the other.
+    /// </summary>
+    private static CountAccess CountAccessFor(ITypeSymbol type)
+    {
+        // An array satisfies IReadOnlyCollection<T> through the runtime rather than its own members.
+        if (type is IArrayTypeSymbol) return new CountAccess("Length", null);
+
+        // A dictionary needs no case of its own: IReadOnlyDictionary<TKey, TValue> derives from
+        // IReadOnlyCollection<T> of its pairs, so the one interface answers for both.
+        var countable = IsCountable(type) ? type : type.AllInterfaces.FirstOrDefault(IsCountable);
+        if (countable is null) return default;
+
+        // Implementing the interface is not the same as offering the member under a name we can write.
+        // ImmutableArray<T> spells it Length and implements Count explicitly; others implement it
+        // explicitly and offer nothing, and those are read back through the interface itself.
+        if (Reads(type, "Count")) return new CountAccess("Count", null);
+        if (Reads(type, "Length")) return new CountAccess("Length", null);
+
+        return new CountAccess(null, countable.ToDisplayString(Formats.Type));
+    }
+
+    private static bool IsCountable(ITypeSymbol type) =>
+        type.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IReadOnlyCollection_T;
+
+    /// <summary>Whether the type offers <paramref name="name"/> as a public instance <c>int</c> property.</summary>
+    private static bool Reads(ITypeSymbol type, string name) => Offers(type, candidate => Declares(candidate, name));
+
+    /// <summary>
+    /// Whether the member is there to be named, rather than only satisfying an interface. An explicit
+    /// implementation is private to everything but a cast, so it never answers this.
+    /// </summary>
+    private static bool Offers(ITypeSymbol type, Func<ITypeSymbol, bool> declares)
+    {
+        // An interface-typed property reaches the member through the interfaces it inherits, not a base chain.
+        if (type.TypeKind == TypeKind.Interface)
+        {
+            if (declares(type)) return true;
+
+            foreach (var candidate in type.AllInterfaces)
+                if (declares(candidate))
+                    return true;
+
+            return false;
+        }
+
+        for (var current = type; current is not null; current = current.BaseType)
+            if (declares(current))
+                return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// Whether the type declares exactly the <c>ToString(string, IFormatProvider)</c> that
+    /// <c>ToString(null, null)</c> would bind to. A second two-parameter overload would make that call
+    /// ambiguous, so a type carrying one is left to the cast.
+    /// </summary>
+    private static bool FormatsItself(ITypeSymbol type)
+    {
+        var found = false;
+
+        foreach (var member in type.GetMembers("ToString"))
+        {
+            if (member is not IMethodSymbol
+                {
+                    IsStatic: false,
+                    DeclaredAccessibility: Accessibility.Public,
+                    Parameters.Length: 2,
+                    ReturnType.SpecialType: SpecialType.System_String,
+                } method)
+                continue;
+
+            if (method.Parameters[0].Type.SpecialType != SpecialType.System_String ||
+                method.Parameters[1].Type.ToDisplayString(Formats.Match) != "System.IFormatProvider")
+                return false;
+
+            found = true;
+        }
+
+        return found;
+    }
+
+    private static bool Declares(ITypeSymbol type, string name)
+    {
+        foreach (var member in type.GetMembers(name))
+            if (member is IPropertySymbol
+                {
+                    IsStatic: false,
+                    DeclaredAccessibility: Accessibility.Public,
+                    Type.SpecialType: SpecialType.System_Int32,
+                })
+                return true;
+
+        return false;
     }
 
     /// <summary>The <c>T</c> of the sequence, or null when the type is not one.</summary>

@@ -71,10 +71,10 @@ public class FormattedTests
                     [global::System.ComponentModel.Description("Outside air")]
                     public double Outside_Degrees => _source.Outside.Degrees;
 
-                    /// <summary><c>((global::System.IFormattable)Outside)?.ToString(null, null)</c></summary>
+                    /// <summary><c>Outside.ToString(null, null)</c></summary>
                     /// <remarks><see cref="Demo.Model.Outside"/></remarks>
                     [global::System.ComponentModel.Description("Outside air (Formatted)")]
-                    public string? Outside_Formatted => ((global::System.IFormattable)_source.Outside)?.ToString(null, null);
+                    public string? Outside_Formatted => _source.Outside.ToString(null, null);
 
                     /// <summary><c>Inner</c></summary>
                     /// <remarks><see cref="Demo.Model.Inner"/></remarks>
@@ -88,9 +88,9 @@ public class FormattedTests
                     /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/> <see cref="Demo.Temperature.Degrees"/></remarks>
                     public double? Inner_Reading_Degrees => _source.Inner?.Reading.Degrees;
 
-                    /// <summary><c>((global::System.IFormattable)Inner?.Reading)?.ToString(null, null)</c></summary>
+                    /// <summary><c>Inner?.Reading.ToString(null, null)</c></summary>
                     /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/></remarks>
-                    public string? Inner_Reading_Formatted => ((global::System.IFormattable)_source.Inner?.Reading)?.ToString(null, null);
+                    public string? Inner_Reading_Formatted => _source.Inner?.Reading.ToString(null, null);
                 }
             }
             """;
@@ -138,6 +138,81 @@ public class FormattedTests
 
         result.Source.Should().Contain("public string? Reading_Formatted => _source.Reading_Formatted;");
         result.Source.Should().Contain(
-            "public string? Reading__Formatted => ((global::System.IFormattable)_source.Reading)?.ToString(null, null);");
+            "public string? Reading__Formatted => _source.Reading.ToString(null, null);");
+    }
+
+    [Fact]
+    public void Asks_a_reference_type_for_its_text_through_the_lifted_chain()
+    {
+        var source = TestSources.Wrap("""
+            public class Money : System.IFormattable
+            {
+                public string ToString(string format, System.IFormatProvider provider) => "";
+            }
+
+            public class Model { public Money Price { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        // The method is public, so it is called directly; the property can be null, so the call lifts.
+        result.Source.Should().Contain("public string? Price_Formatted => _source.Price?.ToString(null, null);");
+    }
+
+    [Fact]
+    public void Casts_to_reach_a_formattable_implemented_explicitly()
+    {
+        var source = TestSources.Wrap("""
+            public class Money : System.IFormattable
+            {
+                string System.IFormattable.ToString(string format, System.IFormatProvider provider) => "";
+            }
+
+            public class Model { public Money Price { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        // Nothing here can be named without a cast, and the cast works either way.
+        result.Source.Should().Contain(
+            "public string? Price_Formatted => "
+            + "((global::System.IFormattable)_source.Price)?.ToString(null, null);");
+    }
+
+    [Fact]
+    public void Casts_rather_than_risk_an_ambiguous_call()
+    {
+        // A second two-parameter ToString would make ToString(null, null) ambiguous, so the cast picks the
+        // overload for us.
+        var source = TestSources.Wrap("""
+            public class Money : System.IFormattable
+            {
+                public string ToString(string format, System.IFormatProvider provider) => "";
+                public string ToString(string format, string culture) => "";
+            }
+
+            public class Model { public Money Price { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain(
+            "public string? Price_Formatted => "
+            + "((global::System.IFormattable)_source.Price)?.ToString(null, null);");
+    }
+
+    [Fact]
+    public void Joins_a_sequence_of_formattable_elements_without_casting_each_one()
+    {
+        var source = TestSources.Wrap("""
+            using System.Collections.Generic;
+
+            public class Model { public List<int> Codes { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain("item => item.ToString(null, null)");
+        result.Source.Should().NotContain("(global::System.IFormattable)item");
     }
 }

@@ -249,6 +249,12 @@ internal static class Parser
             {
                 if (self) candidates.Add(PassThrough(next, underlying, tail));
 
+                // Anything that can say how long it is gets a count, which a grid can show on its own.
+                if (known.GetCount(underlying) is var count && count != default)
+                    candidates.Add(Convert(next, count.Member is { } read
+                        ? Conversions.Tail("Count", "int", read)
+                        : Conversions.Cast("Count", "int", count.Cast!, "Count")));
+
                 // A sequence of renderable elements also gets a rendered form, for a grid column.
                 var element = known.GetElementRenderer(underlying);
                 if (element != Renderer.None)
@@ -495,8 +501,11 @@ internal static class Parser
     private static Candidate Display(Path path, Renderer element) => new(
         path.Chain.Add("Display"),
         "string?",
+        // Strings are their own display text, so they are joined as they stand rather than projected first.
         $"{path.Safe} is {{ }} items ? global::System.String.Join(\", \", " +
-        $"global::System.Linq.Enumerable.Select(items, item => {KnownTypes.RenderElement(element, "item")}))"
+        (element == Renderer.Text
+            ? "items)"
+            : $"global::System.Linq.Enumerable.Select(items, item => {KnownTypes.RenderElement(element, "item")}))")
         + " : null",
         null,
         null,

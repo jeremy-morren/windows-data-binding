@@ -170,7 +170,7 @@ public class MapTypeTests
         result.Source.Should().Contain(
             "public global::System.DateTime? Created => _source.Created?.Moment.ToDateTimeUtc();");
         result.Source.Should().Contain(
-            "public string? Created_Formatted => ((global::System.IFormattable)_source.Created?.Moment)?.ToString(null, null);");
+            "public string? Created_Formatted => _source.Created?.Moment.ToString(null, null);");
     }
 
     [Fact]

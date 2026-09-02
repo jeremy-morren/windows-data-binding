@@ -30,8 +30,13 @@
     <None Include="$(OutputPath)$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     <None Include="$(OutputPath)WinDataBinding.SourceGenerator.Attributes.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 
-    <!-- The same attributes as a normal reference, so consuming code can apply them. -->
+    <!--
+      The same attributes as a normal reference, so consuming code can apply them. This is a real runtime
+      dependency, not just a compile-time one: reading an attribute back reflectively loads the assembly
+      that declares it, so it has to reach the consumer's output. The docs travel with it for IntelliSense.
+    -->
     <None Include="$(OutputPath)WinDataBinding.SourceGenerator.Attributes.dll" Pack="true" PackagePath="lib/netstandard2.0" Visible="false" />
+    <None Include="$(OutputPath)WinDataBinding.SourceGenerator.Attributes.xml" Pack="true" PackagePath="lib/netstandard2.0" Visible="false" />
   </ItemGroup>
 
   <ItemGroup>

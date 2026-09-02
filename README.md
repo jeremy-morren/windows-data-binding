@@ -98,10 +98,10 @@ namespace Demo
         [global::System.ComponentModel.Description("The timestamp that the person was created at")]
         public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
 
-        /// <summary><c>((global::System.IFormattable)CreatedAt)?.ToString(null, null)</c></summary>
+        /// <summary><c>CreatedAt.ToString(null, null)</c></summary>
         /// <remarks><see cref="Demo.Person.CreatedAt"/></remarks>
         [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
-        public string? CreatedAt_Formatted => ((global::System.IFormattable)_source.CreatedAt)?.ToString(null, null);
+        public string? CreatedAt_Formatted => _source.CreatedAt.ToString(null, null);
 
         /// <summary><c>LastLogin</c></summary>
         /// <remarks><see cref="Demo.Person.LastLogin"/></remarks>
@@ -138,10 +138,10 @@ namespace Demo
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
         public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
 
-        /// <summary><c>((global::System.IFormattable)LastLogin?.Timestamp)?.ToString(null, null)</c></summary>
+        /// <summary><c>LastLogin?.Timestamp.ToString(null, null)</c></summary>
         /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
-        public string? LastLogin_Timestamp_Formatted => ((global::System.IFormattable)_source.LastLogin?.Timestamp)?.ToString(null, null);
+        public string? LastLogin_Timestamp_Formatted => _source.LastLogin?.Timestamp.ToString(null, null);
     }
 }
 ```
@@ -152,10 +152,26 @@ namespace Demo
 <Project>
   <ItemGroup>
     <!-- Add the package -->
-    <PackageReference Include="WinDataBinding" Version="1.0.0-*" PrivateAssets="all" />
+    <PackageReference Include="WinDataBinding" Version="1.0.0-*" />
     <!-- -->
   </ItemGroup>
 </Project>
+```
+
+The package has no dependencies of its own. Only the attributes assembly reaches your output — the generator
+ships as an analyzer and is never referenced — and that assembly is a **runtime** dependency, not merely a
+compile-time one: reading an attribute back reflectively loads the assembly that declares it.
+
+So resist the usual analyzer idioms. `PrivateAssets="all"` and `ExcludeAssets="runtime"` both stop the
+attributes assembly reaching the application, and neither shows up at build time — the code compiles, and
+then throws `FileNotFoundException` the first time anything calls `GetCustomAttributes`. `PrivateAssets="all"`
+is the subtler of the two: the project declaring the binders works fine, and only an application referencing
+*it* breaks, because the attributes never travel that last hop.
+
+To keep the generator itself from running in projects downstream of yours, make just that part private:
+
+```xml
+<PackageReference Include="WinDataBinding" Version="1.0.0-*" PrivateAssets="analyzers" />
 ```
 
 ## Descriptions
@@ -252,7 +268,7 @@ public int? Current_Speed => this.Current?.Speed;
 
 public global::System.Guid? Order_Value => this.Order?.Value;
 
-public string? Order_Value_Formatted => ((global::System.IFormattable)this.Order?.Value)?.ToString(null, null);
+public string? Order_Value_Formatted => this.Order?.Value.ToString(null, null);
 
 public global::System.TimeSpan? Elapsed_Value => this.Elapsed?.ToTimeSpan();
 ```
@@ -385,10 +401,31 @@ Any `enum` is passed through as-is.
 
 Anything inheriting from `IEnumerable<>` (except `string`) will be returned as is.
 
-Anything inheriting from `IEnumerable<T>` where `T` is renderable (see below) will have 2 additional
-properties (both `string?`):
+Anything inheriting from `IEnumerable<T>` where `T` is renderable (see below) or is `string` will have 2
+additional properties (both `string?`):
 - `Property_Display` - `string.Join(", ", Property.Select(x => /* render x */))`
 - `Property_Array`- `Property_Display is { } display ? $"[{display}]" : null`
+
+Strings are already their own display text, so a sequence of them is joined as it stands rather than
+projected first: `string.Join(", ", Property)`.
+
+Anything inheriting from `IReadOnlyCollection<T>` also gets `Property_Count`, which is `int` when the
+collection cannot be null and `int?` when it can — a struct collection on a non-nullable chain gives a plain
+`int`. `IReadOnlyDictionary<TKey, TValue>` is covered by the same rule: it derives from
+`IReadOnlyCollection<T>` of its pairs. A bare `IEnumerable<T>` gets no count, having no length to report
+without being walked.
+
+The count is read the way the type itself spells it, and the generated code never resorts to LINQ:
+
+| Collection                                     | Count expression |
+| :--------------------------------------------- | :- |
+| `List<T>`, `IReadOnlyDictionary<TKey, TValue>` | `Property?.Count` |
+| `T[]`, `ImmutableArray<T>`                     | `Property?.Length` |
+| implements `Count` explicitly                  | `((IReadOnlyCollection<T>)Property)?.Count` |
+
+An array satisfies `IReadOnlyCollection<T>` through the runtime rather than through its own members, and
+`ImmutableArray<T>` implements `Count` explicitly while offering `Length` — so both are read as `Length`,
+which also avoids boxing the struct. A type that offers neither name is read back through the interface.
 
 #### Formattable types
 
@@ -402,9 +439,15 @@ A type is renderable if it is any of these:
 
 | Type                                                        | Rendered with |
 | :---------------------------------------------------------- | :- |
-| implements `IFormattable`                                   | `((IFormattable)Property)?.ToString(null, null)` |
+| implements `IFormattable`                                   | `Property.ToString(null, null)`, or `((IFormattable)Property)?.ToString(null, null)` when a cast is needed |
 | `System.Text.Json.Nodes.JsonNode` (including derived types) | `Property?.ToJsonString()` |
 | `System.Text.Json.JsonElement`                              | `Property.GetRawText()` |
+
+`ToString(null, null)` is called directly whenever the type offers it publicly — `int`, `Guid`, every
+`NodaTime` value, a strongly typed ID's underlying value. The cast is the fallback, for a type that
+implements `IFormattable` explicitly, one carrying a second two-parameter `ToString` that would make the call
+ambiguous, and a custom strongly typed ID declared `isFormattable`, whose implementation is written by
+another generator and so cannot be seen from here. Calling directly avoids boxing a struct on every read.
 
 This applies to a bare property and to one reached through the object graph alike:
 
@@ -424,10 +467,10 @@ gives
 
 ```csharp
 public double Outside_Degrees => _source.Outside.Degrees;
-public string? Outside_Formatted => ((global::System.IFormattable)_source.Outside)?.ToString(null, null);
+public string? Outside_Formatted => _source.Outside.ToString(null, null);
 
 public double? Inner_Reading_Degrees => _source.Inner?.Reading.Degrees;
-public string? Inner_Reading_Formatted => ((global::System.IFormattable)_source.Inner?.Reading)?.ToString(null, null);
+public string? Inner_Reading_Formatted => _source.Inner?.Reading.ToString(null, null);
 ```
 
 #### Strongly typed IDs
@@ -452,7 +495,7 @@ public global::System.Guid Order => _source.Order.Value;
 ```
 
 The value also gets the usual rendered twin, except for `TemplateId.String` (which just returns `Value`):
-`public string? Order_Formatted => ((IFormattable)_source.Order.Value)?.ToString(null, null);`.
+`public string? Order_Formatted => _source.Order.Value.ToString(null, null);`.
 
 A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
 

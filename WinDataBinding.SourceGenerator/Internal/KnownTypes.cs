@@ -85,9 +85,10 @@ internal static class KnownTypes
     /// </summary>
     private static readonly Dictionary<string, StrongIdBinding> StrongIdTemplates = new(StringComparer.Ordinal)
     {
-        ["Guid"] = new("global::System.Guid", false, "Value", Renderer.Formattable),
-        ["Int"] = new("int", false, "Value", Renderer.Formattable),
-        ["Long"] = new("long", false, "Value", Renderer.Formattable),
+        // The twin renders the underlying value, which is a type we know formats itself.
+        ["Guid"] = new("global::System.Guid", false, "Value", Renderer.FormattableDirect),
+        ["Int"] = new("int", false, "Value", Renderer.FormattableDirect),
+        ["Long"] = new("long", false, "Value", Renderer.FormattableDirect),
         // string is already text, so it gets no rendered twin.
         ["String"] = new("string", true, "Value", Renderer.None),
     };
@@ -97,7 +98,8 @@ internal static class KnownTypes
     /// </summary>
     public static string RenderValue(Renderer renderer, string safe, string accessor) => renderer switch
     {
-        Renderer.Formattable => $"((global::System.IFormattable){safe})?.ToString(null, null)",
+        Renderer.FormattableDirect => $"{safe}{accessor}ToString(null, null)",
+        Renderer.FormattableByCast => $"((global::System.IFormattable){safe})?.ToString(null, null)",
         Renderer.JsonNode => $"{safe}{accessor}ToJsonString()",
         Renderer.JsonElement => $"{safe}{accessor}GetRawText()",
         _ => throw new ArgumentOutOfRangeException(nameof(renderer)),
@@ -106,7 +108,10 @@ internal static class KnownTypes
     /// <summary>Renders one element of a sequence, inside the lambda that joins them.</summary>
     public static string RenderElement(Renderer renderer, string item) => renderer switch
     {
-        Renderer.Formattable => $"((global::System.IFormattable){item}).ToString(null, null)",
+        Renderer.FormattableDirect => $"{item}.ToString(null, null)",
+        Renderer.FormattableByCast => $"((global::System.IFormattable){item}).ToString(null, null)",
+        // Text never reaches here: a sequence of strings is joined without projecting it first.
+        Renderer.Text => item,
         Renderer.JsonNode => $"{item}?.ToJsonString()",
         Renderer.JsonElement => $"{item}.GetRawText()",
         _ => throw new ArgumentOutOfRangeException(nameof(renderer)),

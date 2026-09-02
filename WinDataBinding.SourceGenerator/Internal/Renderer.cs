@@ -6,8 +6,19 @@ internal enum Renderer
     /// <summary>Cannot be rendered; a grid binds it directly or the graph is traversed instead.</summary>
     None,
 
-    /// <summary>Implements <c>System.IFormattable</c>.</summary>
-    Formattable,
+    /// <summary>
+    /// Offers <c>ToString(string, IFormatProvider)</c> publicly, so it is asked for text directly.
+    /// </summary>
+    FormattableDirect,
+
+    /// <summary>
+    /// Implements <c>System.IFormattable</c>, but not under a name we can write: explicitly, or in generated
+    /// code this compilation cannot see. Reached through a cast, which works either way.
+    /// </summary>
+    FormattableByCast,
+
+    /// <summary>Already text. Only ever an element renderer: a string property is a leaf and renders itself.</summary>
+    Text,
 
     /// <summary><c>System.Text.Json.Nodes.JsonNode</c> or a type deriving from it.</summary>
     JsonNode,
@@ -20,4 +31,14 @@ internal enum Renderer
 /// <param name="IsSequence">Bound as-is rather than traversed. Never true for a JSON value.</param>
 /// <param name="Renderer">How the type itself renders, when it is not a sequence.</param>
 /// <param name="ElementRenderer">How the sequence's elements render.</param>
-internal readonly record struct TypeTraits(bool IsSequence, Renderer Renderer, Renderer ElementRenderer);
+/// <param name="Count">How to read the number of items the type holds.</param>
+internal readonly record struct TypeTraits(
+    bool IsSequence, Renderer Renderer, Renderer ElementRenderer, CountAccess Count = default);
+
+/// <summary>How the number of items a collection holds is reached. Both null when there is no count to read.</summary>
+/// <param name="Member">A member to read directly, <c>Count</c> or <c>Length</c>.</param>
+/// <param name="Cast">
+/// The interface to read <c>Count</c> through, for a type that implements it explicitly and so does not
+/// offer the member under any name of its own.
+/// </param>
+internal readonly record struct CountAccess(string? Member, string? Cast);

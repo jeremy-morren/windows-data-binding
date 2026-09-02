@@ -113,10 +113,10 @@ public class BindingModelTests
                     [global::System.ComponentModel.Description("The timestamp that the person was created at")]
                     public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
 
-                    /// <summary><c>((global::System.IFormattable)CreatedAt)?.ToString(null, null)</c></summary>
+                    /// <summary><c>CreatedAt.ToString(null, null)</c></summary>
                     /// <remarks><see cref="Demo.Person.CreatedAt"/></remarks>
                     [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
-                    public string? CreatedAt_Formatted => ((global::System.IFormattable)_source.CreatedAt)?.ToString(null, null);
+                    public string? CreatedAt_Formatted => _source.CreatedAt.ToString(null, null);
 
                     /// <summary><c>LastLogin</c></summary>
                     /// <remarks><see cref="Demo.Person.LastLogin"/></remarks>
@@ -153,10 +153,10 @@ public class BindingModelTests
                     [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
                     public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
 
-                    /// <summary><c>((global::System.IFormattable)LastLogin?.Timestamp)?.ToString(null, null)</c></summary>
+                    /// <summary><c>LastLogin?.Timestamp.ToString(null, null)</c></summary>
                     /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
                     [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
-                    public string? LastLogin_Timestamp_Formatted => ((global::System.IFormattable)_source.LastLogin?.Timestamp)?.ToString(null, null);
+                    public string? LastLogin_Timestamp_Formatted => _source.LastLogin?.Timestamp.ToString(null, null);
                 }
             }
             """;
@@ -220,9 +220,13 @@ public class BindingModelTests
                     /// <remarks><see cref="Demo.Model.Numbers"/></remarks>
                     public global::System.Collections.Generic.List<int>? Numbers => _source.Numbers;
 
-                    /// <summary><c>Numbers is { } items ? global::System.String.Join(", ", global::System.Linq.Enumerable.Select(items, item =&gt; ((global::System.IFormattable)item).ToString(null, null))) : null</c></summary>
+                    /// <summary><c>Numbers?.Count</c></summary>
                     /// <remarks><see cref="Demo.Model.Numbers"/></remarks>
-                    public string? Numbers_Display => _source.Numbers is { } items ? global::System.String.Join(", ", global::System.Linq.Enumerable.Select(items, item => ((global::System.IFormattable)item).ToString(null, null))) : null;
+                    public int? Numbers_Count => _source.Numbers?.Count;
+
+                    /// <summary><c>Numbers is { } items ? global::System.String.Join(", ", global::System.Linq.Enumerable.Select(items, item =&gt; item.ToString(null, null))) : null</c></summary>
+                    /// <remarks><see cref="Demo.Model.Numbers"/></remarks>
+                    public string? Numbers_Display => _source.Numbers is { } items ? global::System.String.Join(", ", global::System.Linq.Enumerable.Select(items, item => item.ToString(null, null))) : null;
 
                     /// <summary><c>Numbers_Display is { } display ? $"[{display}]" : null</c></summary>
                     /// <remarks><see cref="Demo.Model.Numbers"/></remarks>
@@ -231,6 +235,18 @@ public class BindingModelTests
                     /// <summary><c>Names</c></summary>
                     /// <remarks><see cref="Demo.Model.Names"/></remarks>
                     public string[]? Names => _source.Names;
+
+                    /// <summary><c>Names?.Length</c></summary>
+                    /// <remarks><see cref="Demo.Model.Names"/></remarks>
+                    public int? Names_Count => _source.Names?.Length;
+
+                    /// <summary><c>Names is { } items ? global::System.String.Join(", ", items) : null</c></summary>
+                    /// <remarks><see cref="Demo.Model.Names"/></remarks>
+                    public string? Names_Display => _source.Names is { } items ? global::System.String.Join(", ", items) : null;
+
+                    /// <summary><c>Names_Display is { } display ? $"[{display}]" : null</c></summary>
+                    /// <remarks><see cref="Demo.Model.Names"/></remarks>
+                    public string? Names_Array => Names_Display is { } display ? $"[{display}]" : null;
 
                     /// <summary><c>Colour</c></summary>
                     /// <remarks><see cref="Demo.Model.Colour"/></remarks>

@@ -99,26 +99,26 @@ public class StrongIdTests
                     [global::System.ComponentModel.Description("The order")]
                     public global::System.Guid Order => _source.Order.Value;
 
-                    /// <summary><c>((global::System.IFormattable)Order.Value)?.ToString(null, null)</c></summary>
+                    /// <summary><c>Order.Value.ToString(null, null)</c></summary>
                     /// <remarks><see cref="Demo.Model.Order"/></remarks>
                     [global::System.ComponentModel.Description("The order (Formatted)")]
-                    public string? Order_Formatted => ((global::System.IFormattable)_source.Order.Value)?.ToString(null, null);
+                    public string? Order_Formatted => _source.Order.Value.ToString(null, null);
 
                     /// <summary><c>Line.Value</c></summary>
                     /// <remarks><see cref="Demo.Model.Line"/></remarks>
                     public int Line => _source.Line.Value;
 
-                    /// <summary><c>((global::System.IFormattable)Line.Value)?.ToString(null, null)</c></summary>
+                    /// <summary><c>Line.Value.ToString(null, null)</c></summary>
                     /// <remarks><see cref="Demo.Model.Line"/></remarks>
-                    public string? Line_Formatted => ((global::System.IFormattable)_source.Line.Value)?.ToString(null, null);
+                    public string? Line_Formatted => _source.Line.Value.ToString(null, null);
 
                     /// <summary><c>Batch.Value</c></summary>
                     /// <remarks><see cref="Demo.Model.Batch"/></remarks>
                     public long Batch => _source.Batch.Value;
 
-                    /// <summary><c>((global::System.IFormattable)Batch.Value)?.ToString(null, null)</c></summary>
+                    /// <summary><c>Batch.Value.ToString(null, null)</c></summary>
                     /// <remarks><see cref="Demo.Model.Batch"/></remarks>
-                    public string? Batch_Formatted => ((global::System.IFormattable)_source.Batch.Value)?.ToString(null, null);
+                    public string? Batch_Formatted => _source.Batch.Value.ToString(null, null);
 
                     /// <summary><c>Sku.Value</c></summary>
                     /// <remarks><see cref="Demo.Model.Sku"/></remarks>
@@ -262,7 +262,7 @@ public class StrongIdTests
         // Sharing with members, the value takes the value-property suffix rather than the bare name.
         result.Source.Should().Contain("public global::System.Guid Order_Value => _source.Order.Value;");
         result.Source.Should().Contain(
-            "public string? Order_Value_Formatted => ((global::System.IFormattable)_source.Order.Value)?.ToString(null, null);");
+            "public string? Order_Value_Formatted => _source.Order.Value.ToString(null, null);");
 
         // A nested strongly typed ID unwraps through its own template.
         result.Source.Should().Contain("public int Order_Customer => _source.Order.Customer.Value;");
@@ -294,7 +294,7 @@ public class StrongIdTests
         // Standing alone, the value keeps the bare name; only its rendered twin joins it.
         result.Source.Should().Contain("public global::System.Guid Order => _source.Order.Value;");
         result.Source.Should().Contain(
-            "public string? Order_Formatted => ((global::System.IFormattable)_source.Order.Value)?.ToString(null, null);");
+            "public string? Order_Formatted => _source.Order.Value.ToString(null, null);");
         result.Source.Should().NotContain("Order_Value");
     }
 

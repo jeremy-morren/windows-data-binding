@@ -129,7 +129,7 @@ public class BinderPropertyTests
         result.Should().HaveNoDiagnostics();
         result.Source.Should().Contain("public global::System.Guid? Order_Value => this.Order?.Value;");
         result.Source.Should().Contain(
-            "public string? Order_Value_Formatted => ((global::System.IFormattable)this.Order?.Value)?.ToString(null, null);");
+            "public string? Order_Value_Formatted => this.Order?.Value.ToString(null, null);");
     }
 
     [Fact]

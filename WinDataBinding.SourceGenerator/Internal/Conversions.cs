@@ -12,6 +12,16 @@ internal static class Conversions
         Build = context => context.Safe + context.Accessor + tail,
     };
 
+    /// <summary>
+    /// A member reached through a cast, for a type that implements the declaring interface explicitly.
+    /// </summary>
+    public static Conversion Cast(string? suffix, string type, string target, string tail) => new()
+    {
+        Suffix = suffix,
+        Type = type,
+        Build = context => $"(({target}){context.Safe}){context.Accessor}{tail}",
+    };
+
     /// <summary>A tail whose target type only exists on NET6+, so both branches are emitted.</summary>
     public static Conversion TfmTail(string? suffix, string type, string tail, string typePre6, string tailPre6) => new()
     {

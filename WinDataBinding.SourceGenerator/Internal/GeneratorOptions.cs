@@ -92,7 +92,9 @@ internal sealed class GeneratorOptions
             valueType.ToDisplayString(Formats.Type),
             valueType.IsReferenceType,
             property,
-            formattable ? Renderer.Formattable : Renderer.None,
+            // The twin renders the ID itself, and the half of it that implements IFormattable is written by
+            // another generator. Nothing here can see how, so it is reached through a cast.
+            formattable ? Renderer.FormattableByCast : Renderer.None,
             RendersSelf: true));
     }
 
