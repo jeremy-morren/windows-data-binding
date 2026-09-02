@@ -163,15 +163,23 @@ internal static class Parser
             var underlying = Unwrap(memberType);
             var name = underlying.ToDisplayString(Formats.Match);
 
+            var renderer = known.GetRenderer(underlying);
+            if (renderer is Renderer.JsonNode or Renderer.JsonElement)
+            {
+                candidates.Add(Formatted(next, renderer));
+                continue;
+            }
+
             if (known.IsSequence(underlying))
             {
                 candidates.Add(PassThrough(next, underlying));
 
-                // A sequence of formattable elements also gets a rendered form, for display in a grid column.
-                if (known.IsFormattableSequence(underlying))
+                // A sequence of renderable elements also gets a rendered form, for a grid column.
+                var element = known.GetElementRenderer(underlying);
+                if (element != Renderer.None)
                 {
                     var displayIndex = candidates.Count;
-                    candidates.Add(Display(next));
+                    candidates.Add(Display(next, element));
                     candidates.Add(Rendered(next, displayIndex));
                 }
                 continue;
@@ -188,7 +196,7 @@ internal static class Parser
                 foreach (var conversion in conversions)
                     candidates.Add(Convert(next, conversion));
 
-                AddFormatted(next, underlying, known, candidates);
+                AddFormatted(next, renderer, candidates);
                 continue;
             }
 
@@ -214,8 +222,10 @@ internal static class Parser
                 continue;
             }
 
+            // The object itself binds too, before the members flattened out of it.
+            candidates.Add(PassThrough(next, underlying));
             Walk(complex, next, visited.Add(complex), known, candidates, diagnostics, location, ct);
-            AddFormatted(next, underlying, known, candidates);
+            AddFormatted(next, renderer, candidates);
         }
     }
 
@@ -223,20 +233,22 @@ internal static class Parser
     /// Appends the rendered form of a member that can format itself, after everything else that member
     /// produced. Leaf types and enums are left alone: a grid already renders those.
     /// </summary>
-    private static void AddFormatted(
-        Path path, ITypeSymbol underlying, KnownTypeSymbols known, List<Candidate> candidates)
+    private static void AddFormatted(Path path, Renderer renderer, List<Candidate> candidates)
     {
-        if (!known.IsFormattable(underlying)) return;
+        if (renderer == Renderer.None) return;
 
-        candidates.Add(new Candidate(
-            path.Chain.Add("Formatted"),
-            "string?",
-            $"((global::System.IFormattable){path.Safe})?.ToString(null, null)",
-            null,
-            null,
-            path.Remarks,
-            Description(path.Descriptions, "Formatted")));
+        candidates.Add(Formatted(path, renderer));
     }
+
+    /// <summary>The value rendered as text, always nullable: the rendering itself may return null.</summary>
+    private static Candidate Formatted(Path path, Renderer renderer) => new(
+        path.Chain.Add("Formatted"),
+        "string?",
+        KnownTypes.RenderValue(renderer, path.Safe, path.Accessor),
+        null,
+        null,
+        path.Remarks,
+        Description(path.Descriptions, "Formatted"));
 
     /// <summary>
     /// Public instance properties with a public getter, and public instance fields, walking up the base chain.
@@ -283,12 +295,12 @@ internal static class Parser
     /// <summary>
     /// The elements joined into one string, or null when the sequence itself is null.
     /// </summary>
-    private static Candidate Display(Path path) => new(
+    private static Candidate Display(Path path, Renderer element) => new(
         path.Chain.Add("Display"),
         "string?",
         $"{path.Safe} is {{ }} items ? global::System.String.Join(\", \", " +
-        "global::System.Linq.Enumerable.Select(items, item => ((global::System.IFormattable)item)" +
-        ".ToString(null, null))) : null",
+        $"global::System.Linq.Enumerable.Select(items, item => {KnownTypes.RenderElement(element, "item")}))"
+        + " : null",
         null,
         null,
         path.Remarks,

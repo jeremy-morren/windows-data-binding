@@ -72,6 +72,11 @@ public class BindingModelTests
                     [global::System.ComponentModel.Description("Person name")]
                     public string? Name => _source.Name;
 
+                    /// <summary><c>Address</c></summary>
+                    /// <remarks><see cref="Demo.Person.Address"/></remarks>
+                    [global::System.ComponentModel.Description("Person's address")]
+                    public global::Demo.Address? Address => _source.Address;
+
                     /// <summary><c>Address?.Street</c></summary>
                     /// <remarks><see cref="Demo.Person.Address"/> <see cref="Demo.Address.Street"/></remarks>
                     [global::System.ComponentModel.Description("Person's address")]
@@ -96,6 +101,11 @@ public class BindingModelTests
                     /// <remarks><see cref="Demo.Person.CreatedAt"/></remarks>
                     [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
                     public string? CreatedAt_Formatted => ((global::System.IFormattable)_source.CreatedAt)?.ToString(null, null);
+
+                    /// <summary><c>LastLogin</c></summary>
+                    /// <remarks><see cref="Demo.Person.LastLogin"/></remarks>
+                    [global::System.ComponentModel.Description("Last login in the user's local timezone")]
+                    public global::Demo.LoginInfo? LastLogin => _source.LastLogin;
 
                     /// <summary><c>LastLogin?.Id</c></summary>
                     /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Id"/></remarks>
@@ -194,6 +204,74 @@ public class BindingModelTests
                     /// <summary><c>Text</c></summary>
                     /// <remarks><see cref="Demo.Model.Text"/></remarks>
                     public string? Text => _source.Text;
+                }
+            }
+            """;
+
+        TestHarness.AssertGenerated(expected, source);
+    }
+
+    [Fact]
+    public void Gathers_members_from_every_part_of_a_partial_source_model()
+    {
+        // Roslyn merges the parts, but the order matters: it is what the collision rule works from.
+        var source = TestSources.Wrap("""
+            public partial class Model
+            {
+                /// <summary>From the first part</summary>
+                public string First { get; set; }
+            }
+
+            public partial class Model
+            {
+                public int Second { get; set; }
+
+                public Detail Detail { get; set; }
+            }
+
+            public partial class Detail { public string Left { get; set; } }
+
+            public partial class Detail { public string Right { get; set; } }
+            """);
+
+        const string expected = """
+            namespace Demo
+            {
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                partial class ModelBinder
+                {
+                    private readonly global::Demo.Model _source;
+
+                    public ModelBinder(global::Demo.Model source)
+                    {
+            #if NET6_0_OR_GREATER
+                        global::System.ArgumentNullException.ThrowIfNull(source);
+                        _source = source;
+            #else
+                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+            #endif
+                    }
+
+                    /// <summary><c>First</c></summary>
+                    /// <remarks><see cref="Demo.Model.First"/></remarks>
+                    [global::System.ComponentModel.Description("From the first part")]
+                    public string? First => _source.First;
+
+                    /// <summary><c>Second</c></summary>
+                    /// <remarks><see cref="Demo.Model.Second"/></remarks>
+                    public int Second => _source.Second;
+
+                    /// <summary><c>Detail</c></summary>
+                    /// <remarks><see cref="Demo.Model.Detail"/></remarks>
+                    public global::Demo.Detail? Detail => _source.Detail;
+
+                    /// <summary><c>Detail?.Left</c></summary>
+                    /// <remarks><see cref="Demo.Model.Detail"/> <see cref="Demo.Detail.Left"/></remarks>
+                    public string? Detail_Left => _source.Detail?.Left;
+
+                    /// <summary><c>Detail?.Right</c></summary>
+                    /// <remarks><see cref="Demo.Model.Detail"/> <see cref="Demo.Detail.Right"/></remarks>
+                    public string? Detail_Right => _source.Detail?.Right;
                 }
             }
             """;

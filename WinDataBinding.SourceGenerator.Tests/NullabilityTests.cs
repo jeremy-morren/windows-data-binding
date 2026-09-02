@@ -38,9 +38,21 @@ public class NullabilityTests
             #endif
                     }
 
+                    /// <summary><c>Line</c></summary>
+                    /// <remarks><see cref="Demo.Model.Line"/></remarks>
+                    public global::Demo.Line Line => _source.Line;
+
+                    /// <summary><c>Line.Price</c></summary>
+                    /// <remarks><see cref="Demo.Model.Line"/> <see cref="Demo.Line.Price"/></remarks>
+                    public global::Demo.Money Line_Price => _source.Line.Price;
+
                     /// <summary><c>Line.Price.Amount</c></summary>
                     /// <remarks><see cref="Demo.Model.Line"/> <see cref="Demo.Line.Price"/> <see cref="Demo.Money.Amount"/></remarks>
                     public decimal Line_Price_Amount => _source.Line.Price.Amount;
+
+                    /// <summary><c>Maybe</c></summary>
+                    /// <remarks><see cref="Demo.Model.Maybe"/></remarks>
+                    public global::Demo.Money? Maybe => _source.Maybe;
 
                     /// <summary><c>Maybe?.Amount</c></summary>
                     /// <remarks><see cref="Demo.Model.Maybe"/> <see cref="Demo.Money.Amount"/></remarks>

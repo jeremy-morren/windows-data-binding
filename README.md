@@ -72,6 +72,11 @@ namespace Demo
         [global::System.ComponentModel.Description("Person name")]
         public string? Name => _source.Name;
 
+        /// <summary><c>Address</c></summary>
+        /// <remarks><see cref="Demo.Person.Address"/></remarks>
+        [global::System.ComponentModel.Description("Person's address")]
+        public global::Demo.Address? Address => _source.Address;
+
         /// <summary><c>Address?.Street</c></summary>
         /// <remarks><see cref="Demo.Person.Address"/> <see cref="Demo.Address.Street"/></remarks>
         [global::System.ComponentModel.Description("Person's address")]
@@ -97,6 +102,11 @@ namespace Demo
         [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
         public string? CreatedAt_Formatted => ((global::System.IFormattable)_source.CreatedAt)?.ToString(null, null);
 
+        /// <summary><c>LastLogin</c></summary>
+        /// <remarks><see cref="Demo.Person.LastLogin"/></remarks>
+        [global::System.ComponentModel.Description("Last login in the user's local timezone")]
+        public global::Demo.LoginInfo? LastLogin => _source.LastLogin;
+
         /// <summary><c>LastLogin?.Id</c></summary>
         /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Id"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone")]
@@ -119,16 +129,6 @@ namespace Demo
     }
 }
 ```
-
-## Target framework
-
-The generated file is compiled as part of your project, so it adapts to your target framework with `#if`:
-
-- `ArgumentNullException.ThrowIfNull` is used on NET6+, falling back to `?? throw new ArgumentNullException(...)`.
-- `DateOnly` and `TimeOnly` conversions fall back to `DateTime` and `TimeSpan` (see the NodaTime table below).
-
-Types that merely pass through (`DateOnly`, `Half`, …) need no guard: they can only appear in your model if
-your target framework already has them.
 
 ## Descriptions
 
@@ -171,6 +171,57 @@ public bool Compared => _source.Compared;
 
 ## Types
 
+A property is either *simple* — bound directly, with the object never traversed — or an *object graph*, which
+is flattened. Value types, enums, collections, strongly typed IDs, `JsonNode` and `JsonElement` are all simple.
+
+### Simple types:
+
+#### Common
+
+| Source type    | Output property                                                             |
+| :------------- | :-------------------------------------------------------------------------- |
+| `TimeZoneInfo` | 2 properties: `string _Id` (`Id`) and `string _DisplayName` (`DisplayName`) |
+
+#### `NodaTime`:
+
+| Source Type      | Output property                                                                                                                                                                                                         |
+| :--------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DateTimeZone`   | `string`: `Id`                                                                                                                                                                                                          |
+| `Instant`        | `DateTime`: `ToDateTimeUtc()`                                                                                                                                                                                           |
+| `OffsetDateTime` | `DateTimeOffset`: `.ToDateTimeOffset()`                                                                                                                                                                                 |
+| `ZonedDateTime`  | 2 properties: `DateTimeOffset _Value` (`ToDateTimeOffset()`) and `string _Timezone` (`Zone.Id`)                                                                                                                         |
+| `LocalDateTime`  | `DateTime`: `ToDateTimeUnspecified()`                                                                                                                                                                                   |
+| `LocalDate`      | On NET6+: `DateOnly`: `ToDateOnly()`. Earlier: `DateTime`: `ToDateTimeUnspecified()`                                                                                                                                    |
+| `LocalTime`      | On NET6+: `TimeOnly`: `.ToTimeOnly()`. Earlier: `TimeSpan.FromTicks(x.TickOfDay)`                                                                                                                                       |
+| `Duration`       | `TimeSpan`: `.ToTimeSpan()`                                                                                                                                                                                             |
+| `Offset`         | `TimeSpan`: `.ToTimeSpan()`                                                                                                                                                                                             |
+| `YearMonth`      | On NET6+: `DateOnly`: `OnDayOfMonth(1).ToDateOnly()`. Earlier: `DateTime`: `OnDayOfMonth(1).ToDateTimeUnspecified()`                                                                                                    |
+| `Interval`       | 3 properties: `DateTime? _Start` (`HasStart ? Start.ToDateTimeUtc() : null`), `DateTime? _End` (`HasEnd ? End.ToDateTimeUtc() : null`), and `TimeSpan? _Duration` (`HasStart && HasEnd ? Duration.ToTimeSpan() : null`) |
+| `Period`         | `string`: `.ToString()`                                                                                                                                                                                                 |
+
+#### Object graphs
+
+Everything else is traversed, and **every** object along the way — the root one included — binds as a bare
+property of its own, emitted just before the members flattened out of it:
+
+```csharp
+public class Model { public Address Address { get; set; } }
+public class Address { public Current Current { get; set; } }
+public class Current { public string City { get; set; } }
+```
+
+gives three properties, not one:
+
+```csharp
+public global::Demo.Address? Address => _source.Address;                        // the root object
+public global::Demo.Current? Address_Current => _source.Address?.Current;       // and each one below it
+public string? Address_Current_City => _source.Address?.Current?.City;          // down to the leaf
+```
+
+So a grid can bind a whole object to a templated column, or its flattened members to plain ones, without you
+having to choose up front. A property skipped for a circular reference still gets its bare property: the
+object binds even where the graph cannot be flattened.
+
 #### Value types
 
 `string`, `bool`, `char`, `System.Half`, `float`, `double`, `decimal`, 
@@ -184,24 +235,33 @@ Any `enum` is passed through as-is.
 
 Anything inheriting from `IEnumerable<>` (except `string`) will be returned as is.
 
-Anything inheriting from `IEnumerable<T>` where `T` is `IFormattable` will have 2 additional properties (both `string?`):
-- `Property_Display` - `string.Join(", ", Property.Select(x => ((IFormattable)x).ToString(null, null)))`
+Anything inheriting from `IEnumerable<T>` where `T` is renderable (see below) will have 2 additional
+properties (both `string?`):
+- `Property_Display` - `string.Join(", ", Property.Select(x => /* render x */))`
 - `Property_Array`- `Property_Display is { } display ? $"[{display}]" : null`
 
 #### Formattable types
 
-A non-enumerable property whose type implements `IFormattable` — but is not one of the value types above, and
-not an `enum`, both of which a grid already renders — gets one extra property alongside whatever else it
-produces, emitted last:
+A non-enumerable property whose type is *renderable* — but is not one of the value types above, and not an
+`enum`, both of which a grid already renders — gets one extra property alongside whatever else it produces,
+emitted last:
 
-- `Property_Formatted` (always `string?`) - `((IFormattable)Property)?.ToString(null, null)`
+- `Property_Formatted` (always `string?`)
+
+A type is renderable if it is any of these:
+
+| Type                                                            | Rendered with                                    |
+| :-------------------------------------------------------------- | :----------------------------------------------- |
+| implements `IFormattable`                                       | `((IFormattable)Property)?.ToString(null, null)` |
+| `System.Text.Json.Nodes.JsonNode`, or anything deriving from it | `Property?.ToJsonString()`                       |
+| `System.Text.Json.JsonElement`                                  | `Property.GetRawText()`                          |
 
 This applies to a bare property and to one reached through the object graph alike:
 
 ```csharp
-public struct Temperature : IFormattable { public double Degrees { get; set; } /* ... */ }
+public struct Temperature : IFormattable { public double Degrees { get; } /* ... */ }
 
-public class Inner { public Temperature Reading { get; set; } }
+public class Inner { public Temperature Reading { get; } }
 
 public class Model
 {
@@ -220,21 +280,11 @@ public double? Inner_Reading_Degrees => _source.Inner?.Reading.Degrees;
 public string? Inner_Reading_Formatted => ((global::System.IFormattable)_source.Inner?.Reading)?.ToString(null, null);
 ```
 
-The cast boxes the value, so a `null` anywhere in the chain gives `null` rather than throwing, and the result
-is never assumed non-null. If the model already has a member that takes the name, the generated one widens its
-separator to `Property__Formatted` (see the collision rule above).
-
 #### Strongly typed IDs
 
+A strongly typed ID is a simple type: it binds to its underlying value and is never traversed.
 A [strongly typed ID](https://github.com/andrewlock/StronglyTypedId) declared with one of the four built-in
-templates binds to its underlying value, with no further inspection:
-
-| Template | Output property |
-|:-|:-|
-| `Template.Guid` | `Guid`: `Value` |
-| `Template.Int` | `int`: `Value` |
-| `Template.Long` | `long`: `Value` |
-| `Template.String` | `string`: `Value` |
+templates is treated as a Simple type (traversed to `.Value`).
 
 ```csharp
 [StronglyTypedId(Template.Guid)]
@@ -251,36 +301,6 @@ gives
 public global::System.Guid Order => _source.Order.Value;
 ```
 
-The underlying type comes from the template, not from the struct's own `Value` member: that member is written
-by StronglyTypedId's own source generator, and generators cannot see each other's output.
-
-A custom template (`[StronglyTypedId("my-guid")]`) is not supported — the property is skipped and `WGD005` is
+A custom template (`[StronglyTypedId("my-guid")]`) or bare ([StronglyTypedId]) is not supported — the property is skipped and `WGD005` is
 reported. A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
-
-A bare `[StronglyTypedId]` is also reported as `WGD005`. It defaults to `Template.Guid`, but that default can
-be changed for a whole assembly, and guessing wrong would emit a `Guid` property over an `int` backing field.
-Name the template explicitly to bind it.
-
-#### Common types:
-
-| Source type | Output property |
-|:-|:-|
-| `TimeZoneInfo` | 2 properties: `string _Id` (`Id`) and `string _DisplayName` (`DisplayName`) |
-
-#### `NodaTime` types:
-
-| Source Type | Output property |
-|:-|:-|
-| `DateTimeZone` | `string`: `Id` |
-| `Instant` | `DateTime`: `ToDateTimeUtc()` |
-| `OffsetDateTime` | `DateTimeOffset`: `.ToDateTimeOffset()` |
-| `ZonedDateTime` | 2 properties: `DateTimeOffset _Value` (`ToDateTimeOffset()`) and `string _Timezone` (`Zone.Id`) |
-| `LocalDateTime` | `DateTime`: `ToDateTimeUnspecified()` |
-| `LocalDate` | On NET6+: `DateOnly`: `ToDateOnly()`. Earlier: `DateTime`: `ToDateTimeUnspecified()` |
-| `LocalTime` | On NET6+: `TimeOnly`: `.ToTimeOnly()`. Earlier: `TimeSpan.FromTicks(x.TickOfDay)` |
-| `Duration` | `TimeSpan`: `.ToTimeSpan()` |
-| `Offset` | `TimeSpan`: `.ToTimeSpan()` |
-| `YearMonth` | On NET6+: `DateOnly`: `OnDayOfMonth(1).ToDateOnly()`. Earlier: `DateTime`: `OnDayOfMonth(1).ToDateTimeUnspecified()` |
-| `Interval` | 3 properties: `DateTime? _Start` (`HasStart ? Start.ToDateTimeUtc() : null`), `DateTime? _End` (`HasEnd ? End.ToDateTimeUtc() : null`), and `TimeSpan? _Duration` (`HasStart && HasEnd ? Duration.ToTimeSpan() : null`) |
-| `Period` | `string`: `.ToString()` |
 

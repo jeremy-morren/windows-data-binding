@@ -77,7 +77,6 @@ public readonly partial struct CustomId;
 
 ```
 
-(Update readme)
 If a property (non-enumerable) is encountered that implements IFormattable (other than primitive types):
 
 Also create property _Formatted (always string?, do not assume output is non-null): that does ((IFormattable)Property).ToString(null, null);
@@ -87,3 +86,18 @@ _Formattated should be last property with same collision i.e. if type has a memb
 For object graphs (update readme)
 
 Emit the bare property: i.e. Address.Current.City becomes Address_Current and Address_Current_City.
+
+#### Object Graph
+
+For properties that inherit from IEnumerable<KeyValuePair<TKey, TValue>> where `TKey` and `TValue` are IFormattable, format as:
+`$"{{{string.Join(", ", PropertyName.Select(kvp => $"{kvp.Key.Format(null,null)}: {kvp.Value.Format(null,null)}"))}}}"
+
+extend IFormattable rule to string and all simple types that don't implement IFormattable
+
+extend IFormattable rule to strong ID: i.e. do ID.Value.Format(null,null) - i.e. apply this to IEnumerable and IDictionary
+
+End result: Dictionary<string,JsonElement> Property becomes Property.Select(kvp => $"{kvp.Key}: {kvp.Value.ToJsonString()})
+IDictionary<StrongId,OtherStrongId> becomes "${kvp.Key.Value}: {kvp.Value.Value}"
+
+Should be bare property i.e. no _Display and no _Formatted
+

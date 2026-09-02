@@ -15,10 +15,11 @@ internal static class KnownTypes
     /// <summary>Types bound directly, with no further traversal.</summary>
     private static readonly HashSet<string> LeafTypes = new(StringComparer.Ordinal)
     {
-        "System.String", "System.Boolean", "System.Char", "System.Half",
-        "System.Single", "System.Double", "System.Decimal",
-        "System.Byte", "System.SByte", "System.Int16", "System.Int32", "System.Int64",
-        "System.UInt16", "System.UInt32", "System.UInt64", "System.Int128", "System.UInt128",
+        "System.String", "System.Boolean", "System.Char",
+        "System.Half", "System.Single", "System.Double", "System.Decimal",
+        "System.Byte", "System.SByte", 
+        "System.Int16", "System.Int32", "System.Int64", "System.Int128", 
+        "System.UInt16", "System.UInt32", "System.UInt64", "System.UInt128",
         "System.Uri", "System.Guid", "System.Version",
         "System.DateTime", "System.DateTimeOffset", "System.TimeSpan",
         "System.DateOnly", "System.TimeOnly",
@@ -73,6 +74,27 @@ internal static class KnownTypes
         ["Int"] = Tail(null, "int", "Value"),
         ["Long"] = Tail(null, "long", "Value"),
         ["String"] = Tail(null, "string", "Value", isReference: true),
+    };
+
+    /// <summary>
+    /// Renders a whole value as text. <c>JsonElement</c> has no <c>ToJsonString()</c>; <c>GetRawText()</c> is
+    /// its equivalent.
+    /// </summary>
+    public static string RenderValue(Renderer renderer, string safe, string accessor) => renderer switch
+    {
+        Renderer.Formattable => $"((global::System.IFormattable){safe})?.ToString(null, null)",
+        Renderer.JsonNode => $"{safe}{accessor}ToJsonString()",
+        Renderer.JsonElement => $"{safe}{accessor}GetRawText()",
+        _ => throw new ArgumentOutOfRangeException(nameof(renderer)),
+    };
+
+    /// <summary>Renders one element of a sequence, inside the lambda that joins them.</summary>
+    public static string RenderElement(Renderer renderer, string item) => renderer switch
+    {
+        Renderer.Formattable => $"((global::System.IFormattable){item}).ToString(null, null)",
+        Renderer.JsonNode => $"{item}?.ToJsonString()",
+        Renderer.JsonElement => $"{item}.GetRawText()",
+        _ => throw new ArgumentOutOfRangeException(nameof(renderer)),
     };
 
     public static bool IsLeaf(string fullName) => LeafTypes.Contains(fullName);

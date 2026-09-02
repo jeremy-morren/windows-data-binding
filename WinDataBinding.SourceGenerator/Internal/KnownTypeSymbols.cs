@@ -19,47 +19,25 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     private const string StrongIdAttribute = "StronglyTypedIds.StronglyTypedIdAttribute";
     private const string StrongIdTemplate = "StronglyTypedIds.Template";
 
-    [Flags]
-    private enum Traits
-    {
-        None = 0,
-        Computed = 1,
-        Sequence = 2,
-        FormattableSequence = 4,
-        Formattable = 8,
-    }
-
-    private readonly Dictionary<ISymbol, Traits> _traits = new(SymbolEqualityComparer.Default);
+    private readonly Dictionary<ISymbol, TypeTraits> _traits = new(SymbolEqualityComparer.Default);
     private readonly Dictionary<ISymbol, StrongId> _strongIds = new(SymbolEqualityComparer.Default);
 
-    private INamedTypeSymbol? _formattable;
-    private bool _formattableResolved;
+    private readonly Dictionary<string, INamedTypeSymbol?> _resolved = new(StringComparer.Ordinal);
 
     public Compilation Compilation => compilation;
 
-    /// <summary><c>System.IFormattable</c>, resolved lazily and only once.</summary>
-    private INamedTypeSymbol? Formattable
-    {
-        get
-        {
-            if (!_formattableResolved)
-            {
-                _formattable = compilation.GetTypeByMetadataName("System.IFormattable");
-                _formattableResolved = true;
-            }
-
-            return _formattable;
-        }
-    }
+    private INamedTypeSymbol? Formattable => Resolve("System.IFormattable");
+    private INamedTypeSymbol? JsonNode => Resolve("System.Text.Json.Nodes.JsonNode");
+    private INamedTypeSymbol? JsonElement => Resolve("System.Text.Json.JsonElement");
 
     /// <summary>Whether the type is a sequence, which is bound as-is rather than traversed.</summary>
-    public bool IsSequence(ITypeSymbol type) => Traits_(type).HasFlag(Traits.Sequence);
+    public bool IsSequence(ITypeSymbol type) => Get(type).IsSequence;
 
-    /// <summary>Whether the type is a sequence whose elements can be rendered as text.</summary>
-    public bool IsFormattableSequence(ITypeSymbol type) => Traits_(type).HasFlag(Traits.FormattableSequence);
+    /// <summary>How the type itself renders as text. <see cref="Renderer.None"/> for a sequence.</summary>
+    public Renderer GetRenderer(ITypeSymbol type) => Get(type).Renderer;
 
-    /// <summary>Whether the type itself can be rendered as text. Never true for a sequence.</summary>
-    public bool IsFormattable(ITypeSymbol type) => Traits_(type).HasFlag(Traits.Formattable);
+    /// <summary>How a sequence's elements render as text.</summary>
+    public Renderer GetElementRenderer(ITypeSymbol type) => Get(type).ElementRenderer;
 
     /// <summary>Whether the type is a strongly typed ID, and if so which template declared it.</summary>
     public StrongId GetStrongId(ITypeSymbol type)
@@ -71,7 +49,16 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
         return strongId;
     }
 
-    private Traits Traits_(ITypeSymbol type)
+    private INamedTypeSymbol? Resolve(string metadataName)
+    {
+        if (_resolved.TryGetValue(metadataName, out var cached)) return cached;
+
+        var symbol = compilation.GetTypeByMetadataName(metadataName);
+        _resolved[metadataName] = symbol;
+        return symbol;
+    }
+
+    private TypeTraits Get(ITypeSymbol type)
     {
         if (_traits.TryGetValue(type, out var cached)) return cached;
 
@@ -80,29 +67,48 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
         return traits;
     }
 
-    private Traits ComputeTraits(ITypeSymbol type)
+    private TypeTraits ComputeTraits(ITypeSymbol type)
     {
-        var traits = Traits.Computed;
-
         // string is IEnumerable<char>, but it binds as a leaf.
-        if (type.SpecialType == SpecialType.System_String) return traits;
+        if (type.SpecialType == SpecialType.System_String) return default;
 
-        var formattable = Formattable;
+        // JSON values are checked first: JsonArray and JsonObject are enumerable, but they render whole.
+        if (JsonRenderer(type) is var json && json != Renderer.None)
+            return new TypeTraits(false, json, Renderer.None);
 
-        // A sequence is rendered through its elements, so the two traits are mutually exclusive.
         if (ElementType(type) is { } element)
-        {
-            traits |= Traits.Sequence;
-            if (formattable is not null && Implements(element, formattable))
-                traits |= Traits.FormattableSequence;
+            return new TypeTraits(true, Renderer.None, RendererFor(element));
 
-            return traits;
-        }
+        return new TypeTraits(false, RendererFor(type), Renderer.None);
+    }
 
-        if (formattable is not null && Implements(type, formattable))
-            traits |= Traits.Formattable;
+    private Renderer RendererFor(ITypeSymbol type)
+    {
+        if (JsonRenderer(type) is var json && json != Renderer.None) return json;
 
-        return traits;
+        return Formattable is { } formattable && Implements(type, formattable)
+            ? Renderer.Formattable
+            : Renderer.None;
+    }
+
+    private Renderer JsonRenderer(ITypeSymbol type)
+    {
+        if (JsonElement is { } element && SymbolEqualityComparer.Default.Equals(type, element))
+            return Renderer.JsonElement;
+
+        if (JsonNode is { } node && InheritsFrom(type, node))
+            return Renderer.JsonNode;
+
+        return Renderer.None;
+    }
+
+    private static bool InheritsFrom(ITypeSymbol type, INamedTypeSymbol baseType)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+            if (SymbolEqualityComparer.Default.Equals(current, baseType))
+                return true;
+
+        return false;
     }
 
     private static StrongId ComputeStrongId(ITypeSymbol type)

@@ -35,6 +35,10 @@ public class DiagnosticTests
             #endif
                     }
 
+                    /// <summary><c>Node</c></summary>
+                    /// <remarks><see cref="Demo.Model.Node"/></remarks>
+                    public global::Demo.Node? Node => _source.Node;
+
                     /// <summary><c>Node?.Value</c></summary>
                     /// <remarks><see cref="Demo.Model.Node"/> <see cref="Demo.Node.Value"/></remarks>
                     public int? Node_Value => _source.Node?.Value;

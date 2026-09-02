@@ -45,6 +45,11 @@ public class FormattedTests
             #endif
                     }
 
+                    /// <summary><c>Outside</c></summary>
+                    /// <remarks><see cref="Demo.Model.Outside"/></remarks>
+                    [global::System.ComponentModel.Description("Outside air")]
+                    public global::Demo.Temperature Outside => _source.Outside;
+
                     /// <summary><c>Outside.Degrees</c></summary>
                     /// <remarks><see cref="Demo.Model.Outside"/> <see cref="Demo.Temperature.Degrees"/></remarks>
                     [global::System.ComponentModel.Description("Outside air")]
@@ -54,6 +59,14 @@ public class FormattedTests
                     /// <remarks><see cref="Demo.Model.Outside"/></remarks>
                     [global::System.ComponentModel.Description("Outside air (Formatted)")]
                     public string? Outside_Formatted => ((global::System.IFormattable)_source.Outside)?.ToString(null, null);
+
+                    /// <summary><c>Inner</c></summary>
+                    /// <remarks><see cref="Demo.Model.Inner"/></remarks>
+                    public global::Demo.Inner? Inner => _source.Inner;
+
+                    /// <summary><c>Inner?.Reading</c></summary>
+                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/></remarks>
+                    public global::Demo.Temperature? Inner_Reading => _source.Inner?.Reading;
 
                     /// <summary><c>Inner?.Reading.Degrees</c></summary>
                     /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/> <see cref="Demo.Temperature.Degrees"/></remarks>

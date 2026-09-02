@@ -215,6 +215,10 @@ public class NodaTimeTests
             #endif
                     }
 
+                    /// <summary><c>Inner</c></summary>
+                    /// <remarks><see cref="Demo.Model.Inner"/></remarks>
+                    public global::Demo.Inner? Inner => _source.Inner;
+
                     /// <summary><c>Inner?.Interval.HasStart == true ? Inner.Interval.Start.ToDateTimeUtc() : null</c></summary>
                     /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Interval"/></remarks>
                     public global::System.DateTime? Inner_Interval_Start => _source.Inner?.Interval.HasStart == true ? _source.Inner.Interval.Start.ToDateTimeUtc() : null;
