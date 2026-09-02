@@ -61,16 +61,15 @@ partial class PersonModelBinder
     [Description("Person name")]
     public string? Name => _source.Name;
 
-
-    /// <summary><c>Address.Street</c></summary>
+    /// <summary><c>Address?.Street</c></summary>
     /// <remarks><see cref="Person.Address"/> <see cref="Address.Street"/></remarks>
     public string? Address_Street => _source.Address?.Street;
         
-    /// <summary><c>Address.City</c></summary>
+    /// <summary><c>Address?.City</c></summary>
     /// <remarks><see cref="Person.Address"/> <see cref="Address.City"/></remarks>
     public string? Address_City => _source.Address?.City;
 
-    /// <summary><c>Address.State</c></summary>
+    /// <summary><c>Address?.State</c></summary>
     /// <remarks><see cref="Person.Address"/> <see cref="Address.State"/></remarks>
     [Description("Address state")]
     public string? Address_State => _source.Address?.State;
@@ -83,14 +82,14 @@ partial class PersonModelBinder
     /// <summary><c>LastLogin?.Id</c></summary>
     /// <remarks><see cref="Person.LastLogin"/> <see cref="LoginInfo.Id"/></remarks>
     [Description("Last login in the user's local timezone")]
-    public int? LastLogin_Id { get; set; }
+    public int? LastLogin_Id => _source.LastLogin?.Id;
 
-    /// <summary><c>Person.LastLogin?.Timestamp.ToDateTimeOffset()</c></summary>
+    /// <summary><c>LastLogin?.Timestamp.ToDateTimeOffset()</c></summary>
     /// <remarks><see cref="Person.LastLogin"/> <see cref="LoginInfo.Timestamp"/></remarks>
     [Description("Last login in the user's local timezone: Timestamp the login occurred at (Value)")]
     public DateTimeOffset? LastLogin_Timestamp_Value => _source.LastLogin?.Timestamp.ToDateTimeOffset();
 
-    /// <summary><c>Person.LastLogin?.Timestamp.Zone.Id</c></summary>
+    /// <summary><c>LastLogin?.Timestamp.Zone.Id</c></summary>
     /// <remarks><see cref="Person.LastLogin"/> <see cref="LoginInfo.Timestamp"/></remarks>
     [Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
     public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
@@ -99,16 +98,26 @@ partial class PersonModelBinder
 
 ## Types
 
-In addition to the built-in primitive types, the following types are supported:
+#### Value types
 
-Common types:
+`string`, `bool`, `char`, `System.Half`, `float`, `double`, `decimal`, 
+`byte`, `sbyte`, `short`, `int`, `long`, `ushort`, `uint`, `ulong`,
+`Uri`, `Guid`, `Version`,
+`DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly`
+
+Any `enum` is passed through as-is.
+
+#### Collections
+
+Anything inheriting from `IEnumerable<>` (except `string`) will be returned as-is, with no further processing.
+
+#### Common types:
 
 | Source type | Output property |
 |:-|:-|
 | `TimeZoneInfo` | 2 properties: `string _Id` (`Id`) and `string _DisplayName` (`DisplayName`) |
 
-
-`NodaTime` types:
+#### `NodaTime` types:
 
 | Source Type | Output property |
 |:-|:-|
@@ -118,7 +127,7 @@ Common types:
 | `ZonedDateTime` | 2 properties: `DateTimeOffset _Value` (`ToDateTimeOffset()`) and `string _Timezone` (`Zone.Id`) |
 | `LocalDateTime` | `DateTime`: `ToDateTimeUnspecified()` |
 | `LocalDate` | On NET6+: `DateOnly`: `ToDateOnly()`. Earlier: `DateTime`: `ToDateTimeUnspecified()` |
-| `LocalTime` | On NET6+: `TimeOnly`: `.ToTimeOnly()`. Earlier: `TimeSpan`: `.ToTimeSpan()` |
+| `LocalTime` | On NET6+: `TimeOnly`: `.ToTimeOnly()`. Earlier: `TimeSpan.FromTicks(x.TickOfDay)` |
 | `Duration` | `TimeSpan`: `.ToTimeSpan()` |
 | `Offset` | `TimeSpan`: `.ToTimeSpan()` |
 | `YearMonth` | On NET6+: `DateOnly`: `OnDayOfMonth(1).ToDateOnly()`. Earlier: `DateTime`: `OnDayOfMonth(1).ToDateTimeUnspecified()` |
