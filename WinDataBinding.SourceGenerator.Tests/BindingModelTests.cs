@@ -53,7 +53,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class PersonModelBinder : global::System.IEquatable<PersonModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Person>
+                partial class PersonModelBinder : global::System.IEquatable<PersonModelBinder>
                 {
                     private readonly global::Demo.Person _source;
 
@@ -82,12 +82,6 @@ public class BindingModelTests
 
                     /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.GetHashCode(_source);
-
-                    /// <summary>Compares two sources with the default comparer for their type.</summary>
-                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Person>.Equals(global::Demo.Person? x, global::Demo.Person? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.Equals(x, y);
-
-                    /// <summary>Hashes a source with the default comparer for its type.</summary>
-                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Person>.GetHashCode(global::Demo.Person obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.GetHashCode(obj);
 
                     /// <summary><c>Name</c></summary>
                     /// <remarks><see cref="Demo.Person.Name"/></remarks>
@@ -136,8 +130,23 @@ public class BindingModelTests
 
                     /// <summary><c>LastLogin?.Timestamp.ToDateTimeOffset()</c></summary>
                     /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Value)")]
-                    public global::System.DateTimeOffset? LastLogin_Timestamp_Value => _source.LastLogin?.Timestamp.ToDateTimeOffset();
+                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at")]
+                    public global::System.DateTimeOffset? LastLogin_Timestamp => _source.LastLogin?.Timestamp.ToDateTimeOffset();
+
+                    /// <summary><c>LastLogin?.Timestamp.ToDateTimeUtc()</c></summary>
+                    /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
+                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Utc)")]
+                    public global::System.DateTime? LastLogin_Timestamp_Utc => _source.LastLogin?.Timestamp.ToDateTimeUtc();
+
+                    /// <summary><c>LastLogin?.Timestamp.ToDateTimeUnspecified()</c></summary>
+                    /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
+                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Local)")]
+                    public global::System.DateTime? LastLogin_Timestamp_Local => _source.LastLogin?.Timestamp.ToDateTimeUnspecified();
+
+                    /// <summary><c>LastLogin?.Timestamp.Offset.ToTimeSpan()</c></summary>
+                    /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
+                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Offset)")]
+                    public global::System.TimeSpan? LastLogin_Timestamp_Offset => _source.LastLogin?.Timestamp.Offset.ToTimeSpan();
 
                     /// <summary><c>LastLogin?.Timestamp.Zone.Id</c></summary>
                     /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
@@ -177,7 +186,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -206,12 +215,6 @@ public class BindingModelTests
 
                     /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    /// <summary>Compares two sources with the default comparer for their type.</summary>
-                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
-
-                    /// <summary>Hashes a source with the default comparer for its type.</summary>
-                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>Numbers</c></summary>
                     /// <remarks><see cref="Demo.Model.Numbers"/></remarks>
@@ -306,7 +309,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -335,12 +338,6 @@ public class BindingModelTests
 
                     /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    /// <summary>Compares two sources with the default comparer for their type.</summary>
-                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
-
-                    /// <summary>Hashes a source with the default comparer for its type.</summary>
-                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>First</c></summary>
                     /// <remarks><see cref="Demo.Model.First"/></remarks>
@@ -382,7 +379,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -411,12 +408,6 @@ public class BindingModelTests
 
                     /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    /// <summary>Compares two sources with the default comparer for their type.</summary>
-                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
-
-                    /// <summary>Hashes a source with the default comparer for its type.</summary>
-                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>Own</c></summary>
                     /// <remarks><see cref="Demo.Model.Own"/></remarks>
@@ -455,7 +446,7 @@ public class BindingModelTests
                 partial class Outer
                 {
                     [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                    partial class Binder : global::System.IEquatable<Binder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
+                    partial class Binder : global::System.IEquatable<Binder>
                     {
                         private readonly global::Demo.Model _source;
 
@@ -484,12 +475,6 @@ public class BindingModelTests
 
                         /// <inheritdoc/>
                         public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                        /// <summary>Compares two sources with the default comparer for their type.</summary>
-                        bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
-
-                        /// <summary>Hashes a source with the default comparer for its type.</summary>
-                        int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                         /// <summary><c>Value</c></summary>
                         /// <remarks><see cref="Demo.Model.Value"/></remarks>
@@ -526,7 +511,7 @@ public class BindingModelTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -555,12 +540,6 @@ public class BindingModelTests
 
                     /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    /// <summary>Compares two sources with the default comparer for their type.</summary>
-                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
-
-                    /// <summary>Hashes a source with the default comparer for its type.</summary>
-                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>GetSet</c></summary>
                     /// <remarks><see cref="Demo.Model.GetSet"/></remarks>

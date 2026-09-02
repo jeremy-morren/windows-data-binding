@@ -104,6 +104,24 @@ internal static class Parser
             PropertyChain.Empty, "this", "this", ".", false,
             ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
 
+        /// <summary>
+        /// Extends the chain by a mapped type's expression, which is written out exactly as it was declared.
+        /// The chain of names is left alone: a mapping stands in for the wrapper rather than hanging off it,
+        /// so the property keeps the name the wrapper would have had.
+        /// </summary>
+        public Path Map(TypeMapping mapping)
+        {
+            var lifted = mapping.TargetType.IsReferenceType || IsNullableValue(mapping.TargetType);
+            return new Path(
+                Chain,
+                Safe + Accessor + mapping.Expression,
+                Unchecked + "." + mapping.Expression,
+                lifted ? "?." : ".",
+                Nullable || lifted,
+                Remarks,
+                Descriptions);
+        }
+
         public Path Append(ISymbol member, ITypeSymbol memberType, KnownTypeSymbols known)
         {
             // A link needs a null-conditional accessor after it when it can itself be null; _source never can.
@@ -201,6 +219,23 @@ internal static class Parser
 
             var next = path.Append(member, memberType, known);
             var underlying = Unwrap(memberType);
+
+            // A mapped type is swapped out whole, before anything else looks at it: the wrapper is not walked,
+            // and everything below classifies the target as though the member had been declared with it.
+            // That order is what lets a mapping override a built-in type as well as describe an unknown one.
+            var mapped = options.TryGetMapping(underlying, out var mapping);
+            if (mapped)
+            {
+                next = next.Map(mapping);
+                underlying = Unwrap(mapping.TargetType);
+            }
+
+            // Whether the value binds under this chain at all, and under what name. A property the binder
+            // declares owns its own name, so nothing generated may take it — but a mapping yields a different
+            // value, which takes a _Value segment rather than being dropped, exactly as a conversion does.
+            var self = bare || mapped;
+            var tail = bare ? null : ValueSuffix;
+
             var name = underlying.ToDisplayString(Formats.Match);
 
             var renderer = known.GetRenderer(underlying);
@@ -212,7 +247,7 @@ internal static class Parser
 
             if (known.IsSequence(underlying))
             {
-                if (bare) candidates.Add(PassThrough(next, underlying));
+                if (self) candidates.Add(PassThrough(next, underlying, tail));
 
                 // A sequence of renderable elements also gets a rendered form, for a grid column.
                 var element = known.GetElementRenderer(underlying);
@@ -227,7 +262,7 @@ internal static class Parser
 
             if (underlying.TypeKind == TypeKind.Enum || KnownTypes.IsLeaf(name))
             {
-                if (bare) candidates.Add(PassThrough(next, underlying));
+                if (self) candidates.Add(PassThrough(next, underlying, tail));
                 continue;
             }
 
@@ -235,7 +270,7 @@ internal static class Parser
             {
                 // A conversion with no suffix of its own would take the bare name, which is spoken for here.
                 foreach (var conversion in conversions)
-                    candidates.Add(Convert(next, conversion, bare ? null : ValueSuffix));
+                    candidates.Add(Convert(next, conversion, tail));
 
                 AddFormatted(next, renderer, candidates);
                 continue;
@@ -283,7 +318,7 @@ internal static class Parser
             }
 
             // The object itself binds too, before the members flattened out of it.
-            if (bare) candidates.Add(PassThrough(next, underlying));
+            if (self) candidates.Add(PassThrough(next, underlying, tail));
             Walk(complex, next, visited.Add(complex), known, options, candidates, diagnostics, location, ct);
             AddFormatted(next, renderer, candidates);
             AddNested(complex, next, visited, known, candidates, ct);
@@ -440,17 +475,18 @@ internal static class Parser
         }
     }
 
-    private static Candidate PassThrough(Path path, ITypeSymbol underlying)
+    /// <param name="suffix">Chain segment for a value that may not take the bare name, or null to leave it bare.</param>
+    private static Candidate PassThrough(Path path, ITypeSymbol underlying, string? suffix = null)
     {
         var nullable = underlying.IsReferenceType || path.Nullable;
         return new Candidate(
-            path.Chain,
+            suffix is null ? path.Chain : path.Chain.Add(suffix),
             underlying.ToDisplayString(Formats.Type) + (nullable ? "?" : ""),
             path.Safe,
             null,
             null,
             path.Remarks,
-            Description(path.Descriptions, null));
+            Description(path.Descriptions, suffix));
     }
 
     /// <summary>

@@ -115,8 +115,23 @@ namespace Demo
 
         /// <summary><c>LastLogin?.Timestamp.ToDateTimeOffset()</c></summary>
         /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
-        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Value)")]
-        public global::System.DateTimeOffset? LastLogin_Timestamp_Value => _source.LastLogin?.Timestamp.ToDateTimeOffset();
+        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at")]
+        public global::System.DateTimeOffset? LastLogin_Timestamp => _source.LastLogin?.Timestamp.ToDateTimeOffset();
+
+        /// <summary><c>LastLogin?.Timestamp.ToDateTimeUtc()</c></summary>
+        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
+        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Utc)")]
+        public global::System.DateTime? LastLogin_Timestamp_Utc => _source.LastLogin?.Timestamp.ToDateTimeUtc();
+
+        /// <summary><c>LastLogin?.Timestamp.ToDateTimeUnspecified()</c></summary>
+        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
+        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Local)")]
+        public global::System.DateTime? LastLogin_Timestamp_Local => _source.LastLogin?.Timestamp.ToDateTimeUnspecified();
+
+        /// <summary><c>LastLogin?.Timestamp.Offset.ToTimeSpan()</c></summary>
+        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
+        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Offset)")]
+        public global::System.TimeSpan? LastLogin_Timestamp_Offset => _source.LastLogin?.Timestamp.Offset.ToTimeSpan();
 
         /// <summary><c>LastLogin?.Timestamp.Zone.Id</c></summary>
         /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
@@ -137,7 +152,7 @@ namespace Demo
 <Project>
   <ItemGroup>
     <!-- Add the package -->
-    <PackageReference Include="WinDataBinding" Version="1.0.0-*" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="WinDataBinding" Version="1.0.0-*" PrivateAssets="all" />
     <!-- -->
   </ItemGroup>
 </Project>
@@ -200,11 +215,10 @@ member never takes a defensive copy.
 
 The binder also mirrors how the source compares:
 
-| Interface                    | Always?                            | Delegates to                                                |
-| :--------------------------- | :--------------------------------- | :---------------------------------------------------------- |
-| `IEquatable<TBinder>`        | Yes                                | `EqualityComparer<TSource>.Default.Equals(left, right)`     |
-| `IEqualityComparer<TSource>` | Yes                                | `EqualityComparer<TSource>.Default`, implemented explicitly |
-| `IComparable<TBinder>`       | Only when the source orders itself | `Comparer<TSource>.Default.Compare`                         |
+| Interface              | Always?                            | Delegates to |
+| :--------------------- | :--------------------------------- | :- |
+| `IEquatable<TBinder>`  | Yes                                | `EqualityComparer<TSource>.Default.Equals(left, right)` |
+| `IComparable<TBinder>` | Only when the source orders itself | `Comparer<TSource>.Default.Compare` |
 
 `Equals(object)` and `GetHashCode` are overridden alongside `IEquatable<TBinder>`. Without them a struct
 binder would fall back to `ValueType.Equals`, which compares a struct holding a reference field by
@@ -251,10 +265,15 @@ Two rules differ from the source object:
 - **A simple property is ignored entirely.** `bool`, `bool?`, `string`, `int`, an enum, a `DateTime` — there
   is nothing to flatten, and the property already binds as it stands.
 
-A converted value that would otherwise have taken the bare name gets a `_Value` segment instead, so nothing
-is lost: a `Duration` becomes `Elapsed_Value` (a `TimeSpan`), and a strongly typed ID becomes `Order_Value`.
-A conversion that names its own properties is unaffected — `TimeZoneInfo` still yields `_Id` and
+A value that would otherwise have taken the bare name gets a `_Value` segment instead, so nothing is lost: a
+`Duration` becomes `Elapsed_Value` (a `TimeSpan`), a strongly typed ID becomes `Order_Value`, and a
+[mapped](#mapping-a-wrapper-onto-the-type-it-wraps) wrapper becomes `Declared_Value` whatever shape it maps
+to. A conversion that names its own properties is unaffected — `TimeZoneInfo` still yields `_Id` and
 `_DisplayName`.
+
+The distinction is whether the value is *different* from the property. A conversion or a mapping produces
+something the declared property does not already give you, so it is kept under `_Value`; a plain object graph
+or sequence produces the property itself, so it is dropped and only what comes out of it is generated.
 
 Names you declare by hand always win. A generated property that would collide with one widens its separator
 just as it would against another generated property, so a source `Rank` alongside a declared `Rank` becomes
@@ -309,26 +328,26 @@ is flattened. Value types, enums, collections, strongly typed IDs, `JsonNode` an
 
 #### Common
 
-| Source type    | Output property                                                             |
-| :------------- | :-------------------------------------------------------------------------- |
+| Source type    | Output property |
+| :------------- | :- |
 | `TimeZoneInfo` | 2 properties: `string _Id` (`Id`) and `string _DisplayName` (`DisplayName`) |
 
 #### `NodaTime`:
 
-| Source Type      | Output property                                                                                                                                                                                                         |
-| :--------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DateTimeZone`   | `string`: `Id`                                                                                                                                                                                                          |
-| `Instant`        | `DateTime`: `ToDateTimeUtc()`                                                                                                                                                                                           |
-| `OffsetDateTime` | `DateTimeOffset`: `.ToDateTimeOffset()`                                                                                                                                                                                 |
-| `ZonedDateTime`  | 2 properties: `DateTimeOffset _Value` (`ToDateTimeOffset()`) and `string _Timezone` (`Zone.Id`)                                                                                                                         |
-| `LocalDateTime`  | `DateTime`: `ToDateTimeUnspecified()`                                                                                                                                                                                   |
-| `LocalDate`      | On NET6+: `DateOnly`: `ToDateOnly()`. Earlier: `DateTime`: `ToDateTimeUnspecified()`                                                                                                                                    |
-| `LocalTime`      | On NET6+: `TimeOnly`: `.ToTimeOnly()`. Earlier: `TimeSpan.FromTicks(x.TickOfDay)`                                                                                                                                       |
-| `Duration`       | `TimeSpan`: `.ToTimeSpan()`                                                                                                                                                                                             |
-| `Offset`         | `TimeSpan`: `.ToTimeSpan()`                                                                                                                                                                                             |
-| `YearMonth`      | On NET6+: `DateOnly`: `OnDayOfMonth(1).ToDateOnly()`. Earlier: `DateTime`: `OnDayOfMonth(1).ToDateTimeUnspecified()`                                                                                                    |
+| Source Type      | Output property |
+| :--------------- | :- |
+| `DateTimeZone`   | `string`: `Id` |
+| `Instant`        | `DateTime`: `ToDateTimeUtc()` |
+| `OffsetDateTime` | 4 properties: `DateTimeOffset` (`ToDateTimeOffset()`), `DateTime _Utc` (`ToInstant().ToDateTimeUtc()`), `DateTime _Local` (`LocalDateTime.ToDateTimeUnspecified()`), `TimeSpan _Offset` (`Offset.ToTimeSpan()`) |
+| `ZonedDateTime`  | 5 properties: `DateTimeOffset` (`ToDateTimeOffset()`), `DateTime _Utc` (`ToDateTimeUtc()`), `DateTime _Local` (`ToDateTimeUnspecified()`), `TimeSpan _Offset` (`Offset.ToTimeSpan()`), `string _Timezone` (`Zone.Id`) |
+| `LocalDateTime`  | `DateTime`: `ToDateTimeUnspecified()` |
+| `LocalDate`      | On NET6+: `DateOnly`: `ToDateOnly()`. Earlier: `DateTime`: `ToDateTimeUnspecified()` |
+| `LocalTime`      | On NET6+: `TimeOnly`: `.ToTimeOnly()`. Earlier: `TimeSpan.FromTicks(x.TickOfDay)` |
+| `Duration`       | `TimeSpan`: `.ToTimeSpan()` |
+| `Offset`         | `TimeSpan`: `.ToTimeSpan()` |
+| `YearMonth`      | On NET6+: `DateOnly`: `OnDayOfMonth(1).ToDateOnly()`. Earlier: `DateTime`: `OnDayOfMonth(1).ToDateTimeUnspecified()` |
 | `Interval`       | 3 properties: `DateTime? _Start` (`HasStart ? Start.ToDateTimeUtc() : null`), `DateTime? _End` (`HasEnd ? End.ToDateTimeUtc() : null`), and `TimeSpan? _Duration` (`HasStart && HasEnd ? Duration.ToTimeSpan() : null`) |
-| `Period`         | `string`: `.ToString()`                                                                                                                                                                                                 |
+| `Period`         | `string`: `.ToString()` |
 
 #### Object graphs
 
@@ -381,11 +400,11 @@ emitted last:
 
 A type is renderable if it is any of these:
 
-| Type                                                            | Rendered with                                    |
-| :-------------------------------------------------------------- | :----------------------------------------------- |
-| implements `IFormattable`                                       | `((IFormattable)Property)?.ToString(null, null)` |
-| `System.Text.Json.Nodes.JsonNode`, or anything deriving from it | `Property?.ToJsonString()`                       |
-| `System.Text.Json.JsonElement`                                  | `Property.GetRawText()`                          |
+| Type                                                        | Rendered with |
+| :---------------------------------------------------------- | :- |
+| implements `IFormattable`                                   | `((IFormattable)Property)?.ToString(null, null)` |
+| `System.Text.Json.Nodes.JsonNode` (including derived types) | `Property?.ToJsonString()` |
+| `System.Text.Json.JsonElement`                              | `Property.GetRawText()` |
 
 This applies to a bare property and to one reached through the object graph alike:
 
@@ -503,11 +522,49 @@ need not derive from anything and is never instantiated — only its attributes 
 base types are read too, with the most derived declaration of a template name winning, and attributes the
 generator does not understand are ignored.
 
-| Attribute                        | Purpose                                                                                                                                                                                                        |
-| :------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Attribute                        | Purpose |
+| :------------------------------- | :- |
 | `StrongIdTemplateSetupAttribute` | Describes a custom `StronglyTypedId` template: the template name to match, the type of the underlying value, the name of the property holding it, and optionally `isFormattable` (default `true`). Repeatable. |
+| `MapTypeAttribute`               | Stands a wrapper type in for the type it wraps: the wrapper, the type it wraps, and the expression reaching the wrapped value. Repeatable. |
 
 `isFormattable` says whether **the ID struct** implements `IFormattable`. That cannot be checked here: the
 interface is declared by StronglyTypedId's own generator, and generators cannot see each other's output. Pass
 `false` and no rendered twin is emitted; leave it and the twin renders the ID itself.
+
+### Mapping a wrapper onto the type it wraps
+
+`[MapType]` says "wherever you find this type, treat it as that one, reached like this":
+
+```csharp
+[MapType(typeof(OrderId), typeof(Guid), "Value")]
+[MapType(typeof(Tags), typeof(List<int>), "Values")]
+[MapType(typeof(Boxed), typeof(Address), "Unwrap()")]
+public class BindingOptions;
+```
+
+```csharp
+public Guid       Order        => _source.Order.Value;            // OrderId Order
+public List<int>? Labels       => _source.Labels?.Values;         // Tags    Labels
+public string?    Labels_Array => ...
+public Address?   Home         => _source.Home?.Unwrap();         // Boxed   Home
+public string?    Home_Street  => _source.Home?.Unwrap()?.Street;
+```
+
+The expression is written out **exactly as given** — nothing parses, resolves or checks it, so a property, a
+field and a method call are all equally acceptable, and getting it wrong is a compile error in the generated
+file rather than a diagnostic. It is placed after the chain's own accessor, so `?.` is still used wherever a
+link can be null.
+
+The substitution is total and transparent. The wrapper is not traversed, the property keeps the name the
+wrapper would have had, and the *target* is then classified by the ordinary rules — a mapped `List<int>` gets
+`_Display` and `_Array`, a mapped object graph is flattened, a mapped `Instant` is converted to `DateTime`.
+The lookup runs before every other rule, so a mapping can override a type the generator already understands
+as easily as it can describe one it does not.
+
+On a property the binder [declares itself](#properties-you-declare-yourself), where the bare name is already
+taken, the mapped value takes a `_Value` segment just as a conversion does.
+
+Two things `[MapType]` deliberately does not do: it never emits the rendered twin that
+`[StrongIdTemplateSetup]` gives a strongly typed ID, and it matches the type exactly, so a closed generic
+must be named as one.
 

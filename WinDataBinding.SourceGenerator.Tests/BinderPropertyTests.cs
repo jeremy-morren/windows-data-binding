@@ -154,6 +154,47 @@ public class BinderPropertyTests
     }
 
     [Fact]
+    public void Keeps_a_mapped_value_of_any_shape_under_the_value_segment()
+    {
+        // A mapping yields something the declared property does not already give you, whatever it maps to,
+        // so it is kept under _Value rather than dropped along with the name it cannot have.
+        var source = """
+            using System.Collections.Generic;
+            using WinDataBinding;
+
+            namespace Demo;
+
+            public class Address { public string Street { get; set; } }
+
+            public class Tags { public List<int> Values { get; } }
+
+            public class Boxed { public Address Unwrap() => null; }
+
+            [MapType(typeof(Tags), typeof(List<int>), "Values")]
+            [MapType(typeof(Boxed), typeof(Address), "Unwrap()")]
+            public class BindingOptions;
+
+            public class Model { public int Id { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder
+            {
+                public Tags? Labels { get; set; }
+                public Boxed? Home { get; set; }
+            }
+            """;
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain(
+            "public global::System.Collections.Generic.List<int>? Labels_Value => this.Labels?.Values;");
+        result.Source.Should().Contain("public string? Labels_Display =>");
+
+        result.Source.Should().Contain("public global::Demo.Address? Home_Value => this.Home?.Unwrap();");
+        result.Source.Should().Contain("public string? Home_Street => this.Home?.Unwrap()?.Street;");
+    }
+
+    [Fact]
     public void Renders_a_declared_sequence_without_rebinding_it()
     {
         var source = Wrap(

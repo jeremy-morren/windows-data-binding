@@ -10,8 +10,6 @@ namespace WinDataBinding.SourceGenerator.Internal;
 /// <summary>Writes the generated source for one <see cref="BinderModel"/>.</summary>
 internal static class Emitter
 {
-    private const string Comparer = "global::System.Collections.Generic.IEqualityComparer";
-
     private static readonly string ToolName = typeof(Emitter).Assembly.GetName().Name!;
     private static readonly string ToolVersion = typeof(Emitter).Assembly.GetName().Version!.ToString();
 
@@ -82,11 +80,7 @@ internal static class Emitter
         // A readonly struct is free of the defensive copies an ordinary one would take on every member read.
         var declaration = model.Keyword == "struct" ? "readonly partial struct" : $"partial {model.Keyword}";
 
-        var interfaces = new List<string>
-        {
-            $"global::System.IEquatable<{model.ClassName}>",
-            $"{Comparer}<{model.SourceType}>",
-        };
+        var interfaces = new List<string> { $"global::System.IEquatable<{model.ClassName}>" };
         if (model.SourceIsComparable) interfaces.Add($"global::System.IComparable<{model.ClassName}>");
 
         writer.Line($"{declaration} {model.ClassName} : {string.Join(", ", interfaces)}");
@@ -106,7 +100,6 @@ internal static class Emitter
 
         WriteFactory(writer, model);
         WriteEquality(writer, model);
-        WriteComparer(writer, model);
         WriteComparable(writer, model);
 
         foreach (var property in model.Properties)
@@ -172,29 +165,6 @@ internal static class Emitter
             : $"{equality}.GetHashCode(_source)";
 
         writer.Line($"public override int GetHashCode() => {hash};");
-    }
-
-    /// <summary>
-    /// Comparison of two sources, handed straight to the default comparer for the type.
-    /// </summary>
-    private static void WriteComparer(Writer writer, BinderModel model)
-    {
-        var source = model.SourceType;
-        var nullable = model.SourceIsReference ? source + "?" : source;
-        var equality = $"global::System.Collections.Generic.EqualityComparer<{source}>.Default";
-
-        // Implemented explicitly. 
-        // A public method taking the source type would not compile when the source is less accessible than the binder,
-        // and Equals(TSource, TSource) beside object.Equals invites being called by mistake.
-        var self = $"{Comparer}<{source}>";
-
-        writer.Line();
-        writer.Line("/// <summary>Compares two sources with the default comparer for their type.</summary>");
-        writer.Line($"bool {self}.Equals({nullable} x, {nullable} y) => {equality}.Equals(x, y);");
-
-        writer.Line();
-        writer.Line("/// <summary>Hashes a source with the default comparer for its type.</summary>");
-        writer.Line($"int {self}.GetHashCode({source} obj) => {equality}.GetHashCode(obj);");
     }
 
     /// <summary>Ordering, mirrored from the source: a binder sorts however the thing it wraps sorts.</summary>

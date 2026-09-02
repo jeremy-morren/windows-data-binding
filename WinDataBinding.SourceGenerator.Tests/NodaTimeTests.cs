@@ -28,7 +28,7 @@ public class NodaTimeTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -58,12 +58,6 @@ public class NodaTimeTests
                     /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary>Compares two sources with the default comparer for their type.</summary>
-                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
-
-                    /// <summary>Hashes a source with the default comparer for its type.</summary>
-                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
-
                     /// <summary><c>Instant.ToDateTimeUtc()</c></summary>
                     /// <remarks><see cref="Demo.Model.Instant"/></remarks>
                     public global::System.DateTime Instant => _source.Instant.ToDateTimeUtc();
@@ -80,13 +74,37 @@ public class NodaTimeTests
                     /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
                     public global::System.DateTimeOffset OffsetDateTime => _source.OffsetDateTime.ToDateTimeOffset();
 
+                    /// <summary><c>OffsetDateTime.ToInstant().ToDateTimeUtc()</c></summary>
+                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
+                    public global::System.DateTime OffsetDateTime_Utc => _source.OffsetDateTime.ToInstant().ToDateTimeUtc();
+
+                    /// <summary><c>OffsetDateTime.LocalDateTime.ToDateTimeUnspecified()</c></summary>
+                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
+                    public global::System.DateTime OffsetDateTime_Local => _source.OffsetDateTime.LocalDateTime.ToDateTimeUnspecified();
+
+                    /// <summary><c>OffsetDateTime.Offset.ToTimeSpan()</c></summary>
+                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
+                    public global::System.TimeSpan OffsetDateTime_Offset => _source.OffsetDateTime.Offset.ToTimeSpan();
+
                     /// <summary><c>((global::System.IFormattable)OffsetDateTime)?.ToString(null, null)</c></summary>
                     /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
                     public string? OffsetDateTime_Formatted => ((global::System.IFormattable)_source.OffsetDateTime)?.ToString(null, null);
 
                     /// <summary><c>Zoned.ToDateTimeOffset()</c></summary>
                     /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
-                    public global::System.DateTimeOffset Zoned_Value => _source.Zoned.ToDateTimeOffset();
+                    public global::System.DateTimeOffset Zoned => _source.Zoned.ToDateTimeOffset();
+
+                    /// <summary><c>Zoned.ToDateTimeUtc()</c></summary>
+                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
+                    public global::System.DateTime Zoned_Utc => _source.Zoned.ToDateTimeUtc();
+
+                    /// <summary><c>Zoned.ToDateTimeUnspecified()</c></summary>
+                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
+                    public global::System.DateTime Zoned_Local => _source.Zoned.ToDateTimeUnspecified();
+
+                    /// <summary><c>Zoned.Offset.ToTimeSpan()</c></summary>
+                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
+                    public global::System.TimeSpan Zoned_Offset => _source.Zoned.Offset.ToTimeSpan();
 
                     /// <summary><c>Zoned.Zone.Id</c></summary>
                     /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
@@ -223,7 +241,7 @@ public class NodaTimeTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -252,12 +270,6 @@ public class NodaTimeTests
 
                     /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    /// <summary>Compares two sources with the default comparer for their type.</summary>
-                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
-
-                    /// <summary>Hashes a source with the default comparer for its type.</summary>
-                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>Inner</c></summary>
                     /// <remarks><see cref="Demo.Model.Inner"/></remarks>

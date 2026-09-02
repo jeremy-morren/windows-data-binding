@@ -30,6 +30,9 @@ namespace WinDataBinding
         /// <item>
         /// <description><see cref="StrongIdTemplateSetupAttribute"/>Configures strong ID template setup for the generation options.</description>
         /// </item>
+        /// <item>
+        /// <description><see cref="MapTypeAttribute"/>Maps a wrapper type onto the type it wraps.</description>
+        /// </item>
         /// </list>
         /// </remarks>
         public GenerateWindowsBindingModelAttribute(Type modelType, Type generationOptions) {}

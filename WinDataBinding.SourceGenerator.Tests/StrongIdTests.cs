@@ -64,7 +64,7 @@ public class StrongIdTests
             namespace Demo
             {
                 [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>, global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>
+                partial class ModelBinder : global::System.IEquatable<ModelBinder>
                 {
                     private readonly global::Demo.Model _source;
 
@@ -93,12 +93,6 @@ public class StrongIdTests
 
                     /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    /// <summary>Compares two sources with the default comparer for their type.</summary>
-                    bool global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.Equals(global::Demo.Model? x, global::Demo.Model? y) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(x, y);
-
-                    /// <summary>Hashes a source with the default comparer for its type.</summary>
-                    int global::System.Collections.Generic.IEqualityComparer<global::Demo.Model>.GetHashCode(global::Demo.Model obj) => global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(obj);
 
                     /// <summary><c>Order.Value</c></summary>
                     /// <remarks><see cref="Demo.Model.Order"/></remarks>

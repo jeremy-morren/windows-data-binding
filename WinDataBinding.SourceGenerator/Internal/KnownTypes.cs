@@ -37,10 +37,22 @@ internal static class KnownTypes
         // NodaTime
         ["NodaTime.DateTimeZone"] = [Tail(null, "string", "Id", isReference: true)],
         ["NodaTime.Instant"] = [Tail(null, "global::System.DateTime", "ToDateTimeUtc()")],
-        ["NodaTime.OffsetDateTime"] = [Tail(null, "global::System.DateTimeOffset", "ToDateTimeOffset()")],
+        // The instant itself is the bare property; the three views of it that a grid may want to show
+        // separately hang off it. OffsetDateTime has no ToDateTimeUtc() of its own, hence the trip through
+        // ToInstant(); ZonedDateTime does, and its own methods say what they mean.
+        ["NodaTime.OffsetDateTime"] =
+        [
+            Tail(null, "global::System.DateTimeOffset", "ToDateTimeOffset()"),
+            Tail("Utc", "global::System.DateTime", "ToInstant().ToDateTimeUtc()"),
+            Tail("Local", "global::System.DateTime", "LocalDateTime.ToDateTimeUnspecified()"),
+            Tail("Offset", "global::System.TimeSpan", "Offset.ToTimeSpan()"),
+        ],
         ["NodaTime.ZonedDateTime"] =
         [
-            Tail("Value", "global::System.DateTimeOffset", "ToDateTimeOffset()"),
+            Tail(null, "global::System.DateTimeOffset", "ToDateTimeOffset()"),
+            Tail("Utc", "global::System.DateTime", "ToDateTimeUtc()"),
+            Tail("Local", "global::System.DateTime", "ToDateTimeUnspecified()"),
+            Tail("Offset", "global::System.TimeSpan", "Offset.ToTimeSpan()"),
             Tail("Timezone", "string", "Zone.Id", isReference: true),
         ],
         ["NodaTime.LocalDateTime"] = [Tail(null, "global::System.DateTime", "ToDateTimeUnspecified()")],

@@ -7,9 +7,9 @@ namespace WinDataBinding
     /// bound. Apply to the options class named by <see cref="GenerateWindowsBindingModelAttribute"/>.
     /// </summary>
     /// <remarks>
-    /// The four built-in templates need no setup. A custom template does, because the property holding the
-    /// underlying value is written by StronglyTypedId's own source generator, and source generators cannot
-    /// see each other's output.
+    /// The four built-in templates need no setup. 
+    /// A custom template does, because the property holding the underlying value is written by StronglyTypedId's own source generator, 
+    /// and source generators cannot see each other's output.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public sealed class StrongIdTemplateSetupAttribute : Attribute
