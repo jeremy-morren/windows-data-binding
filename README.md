@@ -92,6 +92,11 @@ namespace Demo
         [global::System.ComponentModel.Description("The timestamp that the person was created at")]
         public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
 
+        /// <summary><c>((global::System.IFormattable)CreatedAt)?.ToString(null, null)</c></summary>
+        /// <remarks><see cref="Demo.Person.CreatedAt"/></remarks>
+        [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
+        public string? CreatedAt_Formatted => ((global::System.IFormattable)_source.CreatedAt)?.ToString(null, null);
+
         /// <summary><c>LastLogin?.Id</c></summary>
         /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Id"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone")]
@@ -106,6 +111,11 @@ namespace Demo
         /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
         public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
+
+        /// <summary><c>((global::System.IFormattable)LastLogin?.Timestamp)?.ToString(null, null)</c></summary>
+        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
+        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
+        public string? LastLogin_Timestamp_Formatted => ((global::System.IFormattable)_source.LastLogin?.Timestamp)?.ToString(null, null);
     }
 }
 ```
@@ -164,7 +174,7 @@ public bool Compared => _source.Compared;
 #### Value types
 
 `string`, `bool`, `char`, `System.Half`, `float`, `double`, `decimal`, 
-`byte`, `sbyte`, `short`, `int`, `long`, `ushort`, `uint`, `ulong`,
+`byte`, `sbyte`, `short`, `int`, `long`, `ushort`, `uint`, `ulong`, `Int128`, `UInt128`,
 `Uri`, `Guid`, `Version`,
 `DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly`
 
@@ -172,11 +182,47 @@ Any `enum` is passed through as-is.
 
 #### Collections
 
-Anything inheriting from `IEnumerable<>` (except `string`) will be returned as it.
+Anything inheriting from `IEnumerable<>` (except `string`) will be returned as is.
 
 Anything inheriting from `IEnumerable<T>` where `T` is `IFormattable` will have 2 additional properties (both `string?`):
 - `Property_Display` - `string.Join(", ", Property.Select(x => ((IFormattable)x).ToString(null, null)))`
 - `Property_Array`- `Property_Display is { } display ? $"[{display}]" : null`
+
+#### Formattable types
+
+A non-enumerable property whose type implements `IFormattable` — but is not one of the value types above, and
+not an `enum`, both of which a grid already renders — gets one extra property alongside whatever else it
+produces, emitted last:
+
+- `Property_Formatted` (always `string?`) - `((IFormattable)Property)?.ToString(null, null)`
+
+This applies to a bare property and to one reached through the object graph alike:
+
+```csharp
+public struct Temperature : IFormattable { public double Degrees { get; set; } /* ... */ }
+
+public class Inner { public Temperature Reading { get; set; } }
+
+public class Model
+{
+    public Temperature Outside { get; set; }
+    public Inner Inner { get; set; }
+}
+```
+
+gives
+
+```csharp
+public double Outside_Degrees => _source.Outside.Degrees;
+public string? Outside_Formatted => ((global::System.IFormattable)_source.Outside)?.ToString(null, null);
+
+public double? Inner_Reading_Degrees => _source.Inner?.Reading.Degrees;
+public string? Inner_Reading_Formatted => ((global::System.IFormattable)_source.Inner?.Reading)?.ToString(null, null);
+```
+
+The cast boxes the value, so a `null` anywhere in the chain gives `null` rather than throwing, and the result
+is never assumed non-null. If the model already has a member that takes the name, the generated one widens its
+separator to `Property__Formatted` (see the collision rule above).
 
 #### Strongly typed IDs
 
@@ -210,6 +256,10 @@ by StronglyTypedId's own source generator, and generators cannot see each other'
 
 A custom template (`[StronglyTypedId("my-guid")]`) is not supported — the property is skipped and `WGD005` is
 reported. A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
+
+A bare `[StronglyTypedId]` is also reported as `WGD005`. It defaults to `Template.Guid`, but that default can
+be changed for a whole assembly, and guessing wrong would emit a `Guid` property over an `int` backing field.
+Name the template explicitly to bind it.
 
 #### Common types:
 

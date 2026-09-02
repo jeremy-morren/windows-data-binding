@@ -1,0 +1,114 @@
+namespace WinDataBinding.SourceGenerator.Tests;
+
+public class FormattedTests
+{
+    private const string Temperature = """
+        public struct Temperature : System.IFormattable
+        {
+            public double Degrees { get; set; }
+            public string ToString(string format, System.IFormatProvider provider) => "";
+        }
+        """;
+
+    [Fact]
+    public void Renders_a_formattable_value_at_the_root_and_inside_the_graph()
+    {
+        var source = TestSources.Wrap($$"""
+            {{Temperature}}
+
+            public class Inner { public Temperature Reading { get; set; } }
+
+            public class Model
+            {
+                /// <summary>Outside air</summary>
+                public Temperature Outside { get; set; }
+
+                public Inner Inner { get; set; }
+            }
+            """);
+
+        const string expected = """
+            namespace Demo
+            {
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0.0")]
+                partial class ModelBinder
+                {
+                    private readonly global::Demo.Model _source;
+
+                    public ModelBinder(global::Demo.Model source)
+                    {
+            #if NET6_0_OR_GREATER
+                        global::System.ArgumentNullException.ThrowIfNull(source);
+                        _source = source;
+            #else
+                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+            #endif
+                    }
+
+                    /// <summary><c>Outside.Degrees</c></summary>
+                    /// <remarks><see cref="Demo.Model.Outside"/> <see cref="Demo.Temperature.Degrees"/></remarks>
+                    [global::System.ComponentModel.Description("Outside air")]
+                    public double Outside_Degrees => _source.Outside.Degrees;
+
+                    /// <summary><c>((global::System.IFormattable)Outside)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Outside"/></remarks>
+                    [global::System.ComponentModel.Description("Outside air (Formatted)")]
+                    public string? Outside_Formatted => ((global::System.IFormattable)_source.Outside)?.ToString(null, null);
+
+                    /// <summary><c>Inner?.Reading.Degrees</c></summary>
+                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/> <see cref="Demo.Temperature.Degrees"/></remarks>
+                    public double? Inner_Reading_Degrees => _source.Inner?.Reading.Degrees;
+
+                    /// <summary><c>((global::System.IFormattable)Inner?.Reading)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/></remarks>
+                    public string? Inner_Reading_Formatted => ((global::System.IFormattable)_source.Inner?.Reading)?.ToString(null, null);
+                }
+            }
+            """;
+
+        TestHarness.AssertGenerated(expected, source);
+    }
+
+    [Fact]
+    public void Leaves_primitives_and_enums_without_a_formatted_twin()
+    {
+        // int and DateTime are IFormattable, and every enum is too, but a grid renders those already.
+        var source = TestSources.Wrap("""
+            public enum Colour { Red, Green }
+
+            public class Model
+            {
+                public int Count { get; set; }
+                public System.DateTime When { get; set; }
+                public decimal Total { get; set; }
+                public Colour Colour { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().NotContain("_Formatted");
+    }
+
+    [Fact]
+    public void Widens_the_separator_when_formatted_collides_with_a_real_member()
+    {
+        // The real member is declared first, so it keeps the plain name and the generated one widens.
+        var source = TestSources.Wrap($$"""
+            {{Temperature}}
+
+            public class Model
+            {
+                public string Reading_Formatted { get; set; }
+
+                public Temperature Reading { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain("public string? Reading_Formatted => _source.Reading_Formatted;");
+        result.Source.Should().Contain(
+            "public string? Reading__Formatted => ((global::System.IFormattable)_source.Reading)?.ToString(null, null);");
+    }
+}

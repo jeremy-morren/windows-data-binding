@@ -46,6 +46,10 @@ public class NodaTimeTests
                     /// <remarks><see cref="Demo.Model.Instant"/></remarks>
                     public global::System.DateTime Instant => _source.Instant.ToDateTimeUtc();
 
+                    /// <summary><c>((global::System.IFormattable)Instant)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Instant"/></remarks>
+                    public string? Instant_Formatted => ((global::System.IFormattable)_source.Instant)?.ToString(null, null);
+
                     /// <summary><c>Zone?.Id</c></summary>
                     /// <remarks><see cref="Demo.Model.Zone"/></remarks>
                     public string? Zone => _source.Zone?.Id;
@@ -53,6 +57,10 @@ public class NodaTimeTests
                     /// <summary><c>OffsetDateTime.ToDateTimeOffset()</c></summary>
                     /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
                     public global::System.DateTimeOffset OffsetDateTime => _source.OffsetDateTime.ToDateTimeOffset();
+
+                    /// <summary><c>((global::System.IFormattable)OffsetDateTime)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
+                    public string? OffsetDateTime_Formatted => ((global::System.IFormattable)_source.OffsetDateTime)?.ToString(null, null);
 
                     /// <summary><c>Zoned.ToDateTimeOffset()</c></summary>
                     /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
@@ -62,9 +70,17 @@ public class NodaTimeTests
                     /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
                     public string? Zoned_Timezone => _source.Zoned.Zone.Id;
 
+                    /// <summary><c>((global::System.IFormattable)Zoned)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
+                    public string? Zoned_Formatted => ((global::System.IFormattable)_source.Zoned)?.ToString(null, null);
+
                     /// <summary><c>LocalDateTime.ToDateTimeUnspecified()</c></summary>
                     /// <remarks><see cref="Demo.Model.LocalDateTime"/></remarks>
                     public global::System.DateTime LocalDateTime => _source.LocalDateTime.ToDateTimeUnspecified();
+
+                    /// <summary><c>((global::System.IFormattable)LocalDateTime)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.LocalDateTime"/></remarks>
+                    public string? LocalDateTime_Formatted => ((global::System.IFormattable)_source.LocalDateTime)?.ToString(null, null);
 
             #if NET6_0_OR_GREATER
                     /// <summary><c>LocalDate.ToDateOnly()</c></summary>
@@ -78,6 +94,10 @@ public class NodaTimeTests
                     public global::System.DateTime LocalDate => _source.LocalDate.ToDateTimeUnspecified();
             #endif
 
+                    /// <summary><c>((global::System.IFormattable)LocalDate)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.LocalDate"/></remarks>
+                    public string? LocalDate_Formatted => ((global::System.IFormattable)_source.LocalDate)?.ToString(null, null);
+
             #if NET6_0_OR_GREATER
                     /// <summary><c>LocalTime.ToTimeOnly()</c></summary>
             #else
@@ -90,13 +110,25 @@ public class NodaTimeTests
                     public global::System.TimeSpan LocalTime => global::System.TimeSpan.FromTicks(_source.LocalTime.TickOfDay);
             #endif
 
+                    /// <summary><c>((global::System.IFormattable)LocalTime)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.LocalTime"/></remarks>
+                    public string? LocalTime_Formatted => ((global::System.IFormattable)_source.LocalTime)?.ToString(null, null);
+
                     /// <summary><c>Duration.ToTimeSpan()</c></summary>
                     /// <remarks><see cref="Demo.Model.Duration"/></remarks>
                     public global::System.TimeSpan Duration => _source.Duration.ToTimeSpan();
 
+                    /// <summary><c>((global::System.IFormattable)Duration)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Duration"/></remarks>
+                    public string? Duration_Formatted => ((global::System.IFormattable)_source.Duration)?.ToString(null, null);
+
                     /// <summary><c>Offset.ToTimeSpan()</c></summary>
                     /// <remarks><see cref="Demo.Model.Offset"/></remarks>
                     public global::System.TimeSpan Offset => _source.Offset.ToTimeSpan();
+
+                    /// <summary><c>((global::System.IFormattable)Offset)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Offset"/></remarks>
+                    public string? Offset_Formatted => ((global::System.IFormattable)_source.Offset)?.ToString(null, null);
 
             #if NET6_0_OR_GREATER
                     /// <summary><c>YearMonth.OnDayOfMonth(1).ToDateOnly()</c></summary>
@@ -109,6 +141,10 @@ public class NodaTimeTests
             #else
                     public global::System.DateTime YearMonth => _source.YearMonth.OnDayOfMonth(1).ToDateTimeUnspecified();
             #endif
+
+                    /// <summary><c>((global::System.IFormattable)YearMonth)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.YearMonth"/></remarks>
+                    public string? YearMonth_Formatted => ((global::System.IFormattable)_source.YearMonth)?.ToString(null, null);
 
                     /// <summary><c>Interval.HasStart ? Interval.Start.ToDateTimeUtc() : null</c></summary>
                     /// <remarks><see cref="Demo.Model.Interval"/></remarks>
@@ -202,6 +238,10 @@ public class NodaTimeTests
             #else
                     public global::System.TimeSpan? Inner_Time => _source.Inner?.Time.TickOfDay is { } ticks ? global::System.TimeSpan.FromTicks(ticks) : null;
             #endif
+
+                    /// <summary><c>((global::System.IFormattable)Inner?.Time)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Time"/></remarks>
+                    public string? Inner_Time_Formatted => ((global::System.IFormattable)_source.Inner?.Time)?.ToString(null, null);
                 }
             }
             """;

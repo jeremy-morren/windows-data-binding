@@ -92,6 +92,11 @@ public class BindingModelTests
                     [global::System.ComponentModel.Description("The timestamp that the person was created at")]
                     public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
 
+                    /// <summary><c>((global::System.IFormattable)CreatedAt)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Person.CreatedAt"/></remarks>
+                    [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
+                    public string? CreatedAt_Formatted => ((global::System.IFormattable)_source.CreatedAt)?.ToString(null, null);
+
                     /// <summary><c>LastLogin?.Id</c></summary>
                     /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Id"/></remarks>
                     [global::System.ComponentModel.Description("Last login in the user's local timezone")]
@@ -106,6 +111,11 @@ public class BindingModelTests
                     /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
                     [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
                     public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
+
+                    /// <summary><c>((global::System.IFormattable)LastLogin?.Timestamp)?.ToString(null, null)</c></summary>
+                    /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
+                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
+                    public string? LastLogin_Timestamp_Formatted => ((global::System.IFormattable)_source.LastLogin?.Timestamp)?.ToString(null, null);
                 }
             }
             """;

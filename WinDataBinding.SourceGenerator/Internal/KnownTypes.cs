@@ -18,7 +18,7 @@ internal static class KnownTypes
         "System.String", "System.Boolean", "System.Char", "System.Half",
         "System.Single", "System.Double", "System.Decimal",
         "System.Byte", "System.SByte", "System.Int16", "System.Int32", "System.Int64",
-        "System.UInt16", "System.UInt32", "System.UInt64",
+        "System.UInt16", "System.UInt32", "System.UInt64", "System.Int128", "System.UInt128",
         "System.Uri", "System.Guid", "System.Version",
         "System.DateTime", "System.DateTimeOffset", "System.TimeSpan",
         "System.DateOnly", "System.TimeOnly",

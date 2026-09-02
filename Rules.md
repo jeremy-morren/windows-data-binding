@@ -83,3 +83,7 @@ If a property (non-enumerable) is encountered that implements IFormattable (othe
 Also create property _Formatted (always string?, do not assume output is non-null): that does ((IFormattable)Property).ToString(null, null);
 
 _Formattated should be last property with same collision i.e. if type has a member called Formatted, our custom one becomes __Formatted.
+
+For object graphs (update readme)
+
+Emit the bare property: i.e. Address.Current.City becomes Address_Current and Address_Current_City.

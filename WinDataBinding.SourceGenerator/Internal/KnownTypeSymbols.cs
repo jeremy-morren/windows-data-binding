@@ -26,6 +26,7 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
         Computed = 1,
         Sequence = 2,
         FormattableSequence = 4,
+        Formattable = 8,
     }
 
     private readonly Dictionary<ISymbol, Traits> _traits = new(SymbolEqualityComparer.Default);
@@ -57,6 +58,9 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     /// <summary>Whether the type is a sequence whose elements can be rendered as text.</summary>
     public bool IsFormattableSequence(ITypeSymbol type) => Traits_(type).HasFlag(Traits.FormattableSequence);
 
+    /// <summary>Whether the type itself can be rendered as text. Never true for a sequence.</summary>
+    public bool IsFormattable(ITypeSymbol type) => Traits_(type).HasFlag(Traits.Formattable);
+
     /// <summary>Whether the type is a strongly typed ID, and if so which template declared it.</summary>
     public StrongId GetStrongId(ITypeSymbol type)
     {
@@ -78,14 +82,25 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
 
     private Traits ComputeTraits(ITypeSymbol type)
     {
+        var traits = Traits.Computed;
+
         // string is IEnumerable<char>, but it binds as a leaf.
-        if (type.SpecialType == SpecialType.System_String) return Traits.Computed;
+        if (type.SpecialType == SpecialType.System_String) return traits;
 
-        if (ElementType(type) is not { } element) return Traits.Computed;
+        var formattable = Formattable;
 
-        var traits = Traits.Computed | Traits.Sequence;
-        if (Formattable is { } formattable && Implements(element, formattable))
-            traits |= Traits.FormattableSequence;
+        // A sequence is rendered through its elements, so the two traits are mutually exclusive.
+        if (ElementType(type) is { } element)
+        {
+            traits |= Traits.Sequence;
+            if (formattable is not null && Implements(element, formattable))
+                traits |= Traits.FormattableSequence;
+
+            return traits;
+        }
+
+        if (formattable is not null && Implements(type, formattable))
+            traits |= Traits.Formattable;
 
         return traits;
     }

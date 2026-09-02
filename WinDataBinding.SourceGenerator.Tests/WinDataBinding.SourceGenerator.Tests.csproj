@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WinDataBinding\WinDataBinding.csproj" />
+    <ProjectReference Include="..\WinDataBinding.SourceGenerator.Attributes\WinDataBinding.SourceGenerator.Attributes.csproj" />
     <ProjectReference Include="..\WinDataBinding.SourceGenerator\WinDataBinding.SourceGenerator.csproj" />
   </ItemGroup>
 

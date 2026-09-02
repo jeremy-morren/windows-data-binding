@@ -187,6 +187,8 @@ internal static class Parser
             {
                 foreach (var conversion in conversions)
                     candidates.Add(Convert(next, conversion));
+
+                AddFormatted(next, underlying, known, candidates);
                 continue;
             }
 
@@ -213,7 +215,27 @@ internal static class Parser
             }
 
             Walk(complex, next, visited.Add(complex), known, candidates, diagnostics, location, ct);
+            AddFormatted(next, underlying, known, candidates);
         }
+    }
+
+    /// <summary>
+    /// Appends the rendered form of a member that can format itself, after everything else that member
+    /// produced. Leaf types and enums are left alone: a grid already renders those.
+    /// </summary>
+    private static void AddFormatted(
+        Path path, ITypeSymbol underlying, KnownTypeSymbols known, List<Candidate> candidates)
+    {
+        if (!known.IsFormattable(underlying)) return;
+
+        candidates.Add(new Candidate(
+            path.Chain.Add("Formatted"),
+            "string?",
+            $"((global::System.IFormattable){path.Safe})?.ToString(null, null)",
+            null,
+            null,
+            path.Remarks,
+            Description(path.Descriptions, "Formatted")));
     }
 
     /// <summary>
