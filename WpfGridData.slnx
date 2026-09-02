@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="WpfGridData.SourceGenerator/WpfGridData.SourceGenerator.csproj" />
+  <Project Path="WpfGridData/WpfGridData.csproj" />
+</Solution>
