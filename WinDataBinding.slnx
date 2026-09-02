@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="global.json" />
+    <File Path="README.md" />
+    <File Path="Rules.md" />
+  </Folder>
+  <Project Path="WinDataBinding.SourceGenerator.Tests/WinDataBinding.SourceGenerator.Tests.csproj" Id="3d85f42b-638a-4e94-bfcb-a4f3fe163ce3" />
+  <Project Path="WinDataBinding.SourceGenerator/WinDataBinding.SourceGenerator.csproj" />
+  <Project Path="WinDataBinding/WinDataBinding.csproj" />
+</Solution>

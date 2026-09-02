@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace WpfGridData
+namespace WinDataBinding
 {
     /// <summary>
     /// Specifies that properties for binding to Windows controls should be generated for the specified model type.

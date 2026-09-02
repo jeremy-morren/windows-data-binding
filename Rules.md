@@ -10,6 +10,8 @@ See README.md for a rough overview. Note the following rules:
 - `GenerateWindowsBindingModelAttribute` is the entrypoint: look for this attribute on a class to kick off source generation.
 - Setup nuget package (private assets, shipped attribute, etc) the same as `StronglyTypedId` source generator (look on github)
 
+- Fully qualified everywhere: emitted type names use `global::`, and XML doc `cref`s are namespace-qualified,
+  so nothing in the generated file can be captured by a name in the consuming project.
 - Property chain is prefixed with `_`
 - Include: public properties (init and get-only), public fields.
 - Ensure that if the target type is partial, all parts are considered.

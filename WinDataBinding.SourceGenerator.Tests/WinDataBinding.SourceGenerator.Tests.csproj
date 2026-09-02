@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="7.2.0" />
+    <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net80" Version="1.7.9" />
+    <PackageReference Include="Basic.Reference.Assemblies.NetStandard20" Version="1.7.9" />
+    <PackageReference Include="NodaTime" Version="3.2.2" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <!-- 
+    The netstandard2.0 test compilation needs NodaTime's netstandard2.0 asset: 
+    the net8 one drags in System.Runtime 8.0 and fails to bind against netstandard reference assemblies. 
+  -->
+  <ItemGroup>
+    <None Include="$(PkgNodaTime)\lib\netstandard2.0\NodaTime.dll"
+          Link="refs\netstandard2.0\NodaTime.dll" 
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WinDataBinding\WinDataBinding.csproj" />
+    <ProjectReference Include="..\WinDataBinding.SourceGenerator\WinDataBinding.SourceGenerator.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+  </ItemGroup>
+
+</Project>

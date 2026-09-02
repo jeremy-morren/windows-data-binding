@@ -1,0 +1,69 @@
+using static WinDataBinding.SourceGenerator.Internal.Conversions;
+
+namespace WinDataBinding.SourceGenerator.Internal;
+
+/// <summary>
+/// The type table: which types are bound directly, and which need converting first. Types are matched by
+/// namespace-qualified name, so no reference to NodaTime is required.
+/// </summary>
+/// <remarks>
+/// Both tables are built once by the type initialiser and never written to afterwards, so the concurrent
+/// reads Roslyn may make of them need no synchronisation. Keep them read-only.
+/// </remarks>
+internal static class KnownTypes
+{
+    /// <summary>Types bound directly, with no further traversal.</summary>
+    private static readonly HashSet<string> LeafTypes = new(StringComparer.Ordinal)
+    {
+        "System.String", "System.Boolean", "System.Char", "System.Half",
+        "System.Single", "System.Double", "System.Decimal",
+        "System.Byte", "System.SByte", "System.Int16", "System.Int32", "System.Int64",
+        "System.UInt16", "System.UInt32", "System.UInt64",
+        "System.Uri", "System.Guid", "System.Version",
+        "System.DateTime", "System.DateTimeOffset", "System.TimeSpan",
+        "System.DateOnly", "System.TimeOnly",
+    };
+
+    private static readonly Dictionary<string, Conversion[]> ConversionsByType = new(StringComparer.Ordinal)
+    {
+        ["System.TimeZoneInfo"] =
+        [
+            Tail("Id", "string", "Id", isReference: true),
+            Tail("DisplayName", "string", "DisplayName", isReference: true),
+        ],
+        ["NodaTime.DateTimeZone"] = [Tail(null, "string", "Id", isReference: true)],
+        ["NodaTime.Instant"] = [Tail(null, "global::System.DateTime", "ToDateTimeUtc()")],
+        ["NodaTime.OffsetDateTime"] = [Tail(null, "global::System.DateTimeOffset", "ToDateTimeOffset()")],
+        ["NodaTime.ZonedDateTime"] =
+        [
+            Tail("Value", "global::System.DateTimeOffset", "ToDateTimeOffset()"),
+            Tail("Timezone", "string", "Zone.Id", isReference: true),
+        ],
+        ["NodaTime.LocalDateTime"] = [Tail(null, "global::System.DateTime", "ToDateTimeUnspecified()")],
+        ["NodaTime.LocalDate"] =
+        [
+            TfmTail(null, "global::System.DateOnly", "ToDateOnly()",
+                          "global::System.DateTime", "ToDateTimeUnspecified()"),
+        ],
+        ["NodaTime.LocalTime"] = [LocalTime()],
+        ["NodaTime.Duration"] = [Tail(null, "global::System.TimeSpan", "ToTimeSpan()")],
+        ["NodaTime.Offset"] = [Tail(null, "global::System.TimeSpan", "ToTimeSpan()")],
+        ["NodaTime.YearMonth"] =
+        [
+            TfmTail(null, "global::System.DateOnly", "OnDayOfMonth(1).ToDateOnly()",
+                          "global::System.DateTime", "OnDayOfMonth(1).ToDateTimeUnspecified()"),
+        ],
+        ["NodaTime.Interval"] =
+        [
+            Guarded("Start", "global::System.DateTime", ["HasStart"], "Start.ToDateTimeUtc()"),
+            Guarded("End", "global::System.DateTime", ["HasEnd"], "End.ToDateTimeUtc()"),
+            Guarded("Duration", "global::System.TimeSpan", ["HasStart", "HasEnd"], "Duration.ToTimeSpan()"),
+        ],
+        ["NodaTime.Period"] = [Tail(null, "string", "ToString()", isReference: true)],
+    };
+
+    public static bool IsLeaf(string fullName) => LeafTypes.Contains(fullName);
+
+    public static bool TryGetConversions(string fullName, out Conversion[] conversions) =>
+        ConversionsByType.TryGetValue(fullName, out conversions!);
+}
