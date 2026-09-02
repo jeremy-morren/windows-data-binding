@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+
+    <!-- Deterministic builds for everyone -->
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+</Project>
