@@ -370,6 +370,11 @@ public sealed partial class ModelBinder { }
 
 gives `public global::System.Guid Order => _source.Order.Value;`.
 
+An ID may name several custom templates (`[StronglyTypedId("Template2", "Template1")]`), but takes one
+configuration: the first of those names the options describe wins, in the order the ID names them. Names are
+matched ordinally, so case has to agree. A built-in template beside custom ones
+(`[StronglyTypedId(Template.String, "OtherTemplate")]`) wins over all of them.
+
 Without a matching setup, a custom template is skipped and `WGD005` is reported. So is a bare
 `[StronglyTypedId]`: it defaults to `Template.Guid`, but that default can be changed for a whole assembly,
 and guessing wrong would emit a `Guid` property over an `int` backing field.

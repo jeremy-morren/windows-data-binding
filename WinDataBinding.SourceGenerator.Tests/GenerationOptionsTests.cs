@@ -11,13 +11,13 @@ public class GenerationOptionsTests
 
         namespace StronglyTypedIds
         {
-            public enum Template { Guid, Int, Long, String }
+            public enum Template { Guid, Int, String, Long }
 
             [System.AttributeUsage(System.AttributeTargets.Struct)]
             public sealed class StronglyTypedIdAttribute : System.Attribute
             {
-                public StronglyTypedIdAttribute(Template template) { }
-                public StronglyTypedIdAttribute(string template) { }
+                public StronglyTypedIdAttribute(Template template, params string[] templateNames) { }
+                public StronglyTypedIdAttribute(params string[] templateNames) { }
             }
         }
 
@@ -113,6 +113,107 @@ public class GenerationOptionsTests
         result.Should().HaveNoDiagnostics();
         result.Source.Should().Contain("public long Batch => _source.Batch.Value;");
         result.Source.Should().Contain("public int Line => _source.Line.Value;");
+    }
+
+    [Fact]
+    public void Picks_the_only_named_template_that_is_described()
+    {
+        var source = Wrap("""
+            [StrongIdTemplateSetup("Template1", typeof(int), "Value")]
+            public class BindingOptions;
+
+            [StronglyTypedId("Template2", "Template1")]
+            public readonly partial struct OrderId { public int Value { get; } }
+
+            public class Model { public OrderId Order { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder { }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+        result.Source.Should().Contain("public int Order => _source.Order.Value;");
+    }
+
+    [Fact]
+    public void Takes_the_first_named_template_when_several_are_described()
+    {
+        // One configuration per ID: the order the ID names them decides, not the order they are set up.
+        var source = Wrap("""
+            [StrongIdTemplateSetup("Template1", typeof(int), "Value")]
+            [StrongIdTemplateSetup("Template2", typeof(long), "Other")]
+            public class BindingOptions;
+
+            [StronglyTypedId("Template2", "Template1")]
+            public readonly partial struct OrderId
+            {
+                public int Value { get; }
+                public long Other { get; }
+            }
+
+            public class Model { public OrderId Order { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder { }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        // Template2 is named first, so its long/Other configuration wins over Template1's.
+        result.Source.Should().Contain("public long Order_Other => _source.Order.Other;");
+        result.Source.Should().Contain("public int Order_Value => _source.Order.Value;");
+    }
+
+    [Fact]
+    public void Matches_template_names_ordinally()
+    {
+        // Case differs, so nothing matches and the property is skipped.
+        var source = Wrap("""
+            [StrongIdTemplateSetup("template1", typeof(int), "Value")]
+            public class BindingOptions;
+
+            [StronglyTypedId("Template1")]
+            public readonly partial struct OrderId { public int Value { get; } }
+
+            public class Model { public OrderId Order { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder { }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveDiagnostic("WGD005", DiagnosticSeverity.Warning);
+        result.Source.Should().NotContain("Order");
+    }
+
+    [Fact]
+    public void Prefers_a_built_in_template_over_the_custom_ones_beside_it()
+    {
+        var source = Wrap("""
+            [StrongIdTemplateSetup("OtherTemplate", typeof(int), "Value")]
+            public class BindingOptions;
+
+            [StronglyTypedId(Template.String, "OtherTemplate")]
+            public readonly partial struct SkuId { public string Value { get; } }
+
+            public class Model { public SkuId Sku { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder { }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        // The built-in String template wins: bare property, no rendered twin, and not the int setup.
+        result.Source.Should().Contain("public string? Sku => _source.Sku.Value;");
+        result.Source.Should().NotContain("Sku_Formatted");
     }
 
     [Fact]

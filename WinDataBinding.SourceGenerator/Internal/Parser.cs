@@ -293,8 +293,10 @@ internal static class Parser
         if (strongId.Kind == StrongIdKind.Template && strongId.Template is { } template)
             return KnownTypes.TryGetStrongIdTemplate(template, out binding);
 
-        if (strongId.Template is { } custom)
-            return options.TryGetStrongIdTemplate(custom, out binding);
+        // One configuration per ID: the first template the options describe, in the order the ID named them.
+        foreach (var custom in strongId.CustomTemplates)
+            if (options.TryGetStrongIdTemplate(custom, out binding))
+                return true;
 
         binding = default;
         return false;

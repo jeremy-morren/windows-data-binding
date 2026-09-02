@@ -15,14 +15,13 @@ public class StrongIdTests
 
         namespace StronglyTypedIds
         {
-            public enum Template { Guid, Int, Long, String }
+            public enum Template { Guid, Int, String, Long }
 
             [System.AttributeUsage(System.AttributeTargets.Struct)]
             public sealed class StronglyTypedIdAttribute : System.Attribute
             {
-                public StronglyTypedIdAttribute(Template template) { }
-                public StronglyTypedIdAttribute(string template) { }
-                public StronglyTypedIdAttribute(Template template, string custom) { }
+                public StronglyTypedIdAttribute(Template template, params string[] templateNames) { }
+                public StronglyTypedIdAttribute(params string[] templateNames) { }
             }
         }
 

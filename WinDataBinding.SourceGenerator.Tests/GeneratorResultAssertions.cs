@@ -22,6 +22,16 @@ public class GeneratorResultAssertions(GeneratorResult subject)
     /// <summary>Asserts the output compiles, ignoring diagnostics this generator reported itself.</summary>
     public AndConstraint<GeneratorResultAssertions> Compile(string because = "", params object[] becauseArgs)
     {
+        // CS8785 means the generator threw. Roslyn reports it as a warning and simply produces no source,
+        // so without this a crashed generator looks indistinguishable from one with nothing to say.
+        var crashes = Subject.GeneratorDiagnostics.Where(d => d.Id == "CS8785").ToArray();
+
+        Execute.Assertion
+            .BecauseOf(because, becauseArgs)
+            .ForCondition(crashes.Length == 0)
+            .FailWith("Expected the generator not to throw{reason}, but it did: {0}.",
+                () => string.Join("\n", crashes.Select(d => d.GetMessage())));
+
         Execute.Assertion
             .BecauseOf(because, becauseArgs)
             .ForCondition(Subject.CompilationErrors.IsEmpty)

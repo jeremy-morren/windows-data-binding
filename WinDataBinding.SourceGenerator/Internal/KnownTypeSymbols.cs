@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 
 namespace WinDataBinding.SourceGenerator.Internal;
@@ -122,16 +123,43 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
                 attribute.ConstructorArguments[0] is { Kind: TypedConstantKind.Enum } argument &&
                 argument.Type?.ToDisplayString(Formats.Match) == StrongIdTemplate &&
                 TemplateName(argument) is { } template)
-                return new StrongId(StrongIdKind.Template, template);
+                return new StrongId(StrongIdKind.Template, template, ImmutableArray<string>.Empty);
 
-            // A custom template is named by a string argument; a bare [StronglyTypedId] names nothing.
-            return new StrongId(StrongIdKind.Custom,
-                attribute.ConstructorArguments.Length > 0
-                    ? attribute.ConstructorArguments[0].Value as string
-                    : null);
+            // Otherwise custom templates name it. Both of the attribute's constructors take those as a
+            // 'params string[]', so the names arrive as an array argument, not as strings. A bare
+            // [StronglyTypedId] passes an empty array and so names none.
+            return new StrongId(StrongIdKind.Custom, null, CustomTemplates(attribute.ConstructorArguments));
         }
 
         return StrongId.None;
+    }
+
+    /// <summary>
+    /// Every custom template named by the attribute, in the order given. Which of them applies depends on
+    /// the generation options, which are not known here.
+    /// </summary>
+    private static ImmutableArray<string> CustomTemplates(ImmutableArray<TypedConstant> arguments)
+    {
+        var names = ImmutableArray.CreateBuilder<string>();
+
+        foreach (var argument in arguments)
+        {
+            // Kind has to be tested first: reading Value on an array argument throws.
+            if (argument.Kind == TypedConstantKind.Array)
+            {
+                if (argument.Values.IsDefaultOrEmpty) continue;
+
+                foreach (var element in argument.Values)
+                    if (element.Value is string name)
+                        names.Add(name);
+            }
+            else if (argument.Value is string name)
+            {
+                names.Add(name);
+            }
+        }
+
+        return names.ToImmutable();
     }
 
     /// <summary>The enum member's name, which is what the template table is keyed by.</summary>
