@@ -35,6 +35,8 @@ internal static class Emitter
         writer.Line("//     Changes to this file will be lost if the code is regenerated.");
         writer.Line("// </auto-generated>");
         writer.Line("// ReSharper disable all");
+        // A cref naming a type the consumer cannot see from here is a doc-comment warning, not a real problem.
+        writer.Line("#pragma warning disable CS1574, CS1584, CS1581, CS1580");
         writer.Line("#nullable enable annotations");
         writer.Line("#nullable disable warnings");
         writer.Line();

@@ -4,9 +4,13 @@ Binding deep objects (or non-primitive types such as `NodaTime`) types in WPF/Wi
 This project provides a source generator that generates a flat model for your deep objects.
 This allows you to bind to your deep objects in WPF/WinForms without having to write a lot of boilerplate code.
 
+
 ## Usage
 
 ```csharp
+[GenerateWindowsBindingModelAttribute(typeof(Person))]
+public sealed partial class PersonModelBinder { }
+
 public class Address
 {
     public string Street { get; set; }
@@ -40,9 +44,6 @@ public class Person
     /// <summary>Last login in the user's local timezone</summary>
     public LoginInfo? LastLogin { get; set; }
 }
-
-[GenerateWindowsBindingModelAttribute(typeof(Person))]
-public sealed partial class PersonModelBinder { }
 ```
 
 The generated source will look like this. Every type is fully qualified so the generated code cannot be
@@ -128,6 +129,18 @@ namespace Demo
         public string? LastLogin_Timestamp_Formatted => ((global::System.IFormattable)_source.LastLogin?.Timestamp)?.ToString(null, null);
     }
 }
+```
+
+## Installation
+
+```xml
+<Project>
+  <ItemGroup>
+    <!-- Add the package -->
+    <PackageReference Include="WinDataBinding" Version="1.0.0-*" PrivateAssets="all" ExcludeAssets="runtime" />
+    <!-- -->
+  </ItemGroup>
+</Project>
 ```
 
 ## Descriptions

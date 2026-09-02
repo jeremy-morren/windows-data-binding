@@ -4,12 +4,11 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
 
     <IsRoslynComponent>true</IsRoslynComponent>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
 
-    <PackageId>WinDataBinding.SourceGenerator</PackageId>
+    <PackageId>WinDataBinding</PackageId>
     <Description>
       A source generator that flattens deep object graphs into bindable models for WPF and WinForms.
     </Description>

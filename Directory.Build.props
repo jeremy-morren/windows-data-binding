@@ -1,6 +1,7 @@
 <Project>
 
   <Import Project="version.props" />
+
   <PropertyGroup>
     <Authors>Jeremy Morren</Authors>
     <Copyright>Copyright © Jeremy Morren</Copyright>
@@ -10,6 +11,8 @@
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+
+    <LangVersion>12</LangVersion>
   </PropertyGroup>
 
     <!-- Deterministic builds for everyone -->
