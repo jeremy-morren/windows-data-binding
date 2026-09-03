@@ -152,6 +152,9 @@ internal static class Parser
     /// </summary>
     private const string ValueSuffix = "Value";
 
+    /// <summary>Chain segment for a value rendered as text.</summary>
+    private const string FormattedSuffix = "Formatted";
+
     /// <param name="SiblingIndex">
     /// Index of the candidate whose resolved name replaces <see cref="SiblingPlaceholder"/> in <paramref name="Expression"/>, 
     /// or -1 when the expression stands alone.
@@ -277,10 +280,13 @@ internal static class Parser
             if (KnownTypes.TryGetConversions(name, out var conversions))
             {
                 // A conversion with no suffix of its own would take the bare name, which is spoken for here.
-                foreach (var conversion in conversions)
-                    candidates.Add(Convert(next, conversion, tail));
+                AddConversions(next, conversions, tail, ImmutableHashSet<string>.Empty, candidates);
 
-                AddFormatted(next, renderer, candidates);
+                // A table entry may spell out its own rendered form, as IPAddress does. Adding the automatic
+                // one beside it would only repeat it under a widened name.
+                if (!conversions.Any(conversion => conversion.Suffix == FormattedSuffix))
+                    AddFormatted(next, renderer, candidates);
+
                 continue;
             }
 
@@ -357,6 +363,48 @@ internal static class Parser
         left is null ? right : right is null ? left : left + ": " + right;
 
     /// <summary>
+    /// Adds one table entry's conversions, following any that land on a type the table also knows.
+    /// </summary>
+    /// <param name="seen">
+    /// Entries already being applied further up. The table is written by hand and has no cycle in it, but a
+    /// cycle added later would otherwise hang the compiler rather than fail a test.
+    /// </param>
+    private static void AddConversions(
+        Path path, Conversion[] conversions, string? tail, ImmutableHashSet<string> seen,
+        List<Candidate> candidates)
+    {
+        foreach (var conversion in conversions)
+        {
+            if (conversion.Yields is { } key &&
+                !seen.Contains(key) &&
+                KnownTypes.TryGetConversions(key, out var nested))
+            {
+                AddConversions(Nest(path, conversion, tail), nested, null, seen.Add(key), candidates);
+                continue;
+            }
+
+            candidates.Add(Convert(path, conversion, tail));
+        }
+    }
+
+    /// <summary>The chain as it stands once a conversion has been applied, for the entry it lands on.</summary>
+    private static Path Nest(Path path, Conversion conversion, string? tail)
+    {
+        var safe = conversion.Build(new ExprContext(path.Safe, path.Unchecked, path.Accessor, path.Nullable));
+        var unchecked_ = conversion.Build(new ExprContext(path.Unchecked, path.Unchecked, ".", false));
+        var segment = conversion.Suffix ?? tail;
+
+        return new Path(
+            segment is null ? path.Chain : path.Chain.Add(segment),
+            safe,
+            unchecked_,
+            conversion.IsReference ? "?." : ".",
+            path.Nullable || conversion.IsReference,
+            path.Remarks,
+            path.Descriptions);
+    }
+
+    /// <summary>
     /// Appends the rendered form of a member that can format itself, after everything else that member produced. 
     /// Leaf types and enums are left alone: a grid already renders those.
     /// </summary>
@@ -369,13 +417,13 @@ internal static class Parser
 
     /// <summary>The value rendered as text, always nullable: the rendering itself may return null.</summary>
     private static Candidate Formatted(Path path, Renderer renderer) => new(
-        path.Chain.Add("Formatted"),
+        path.Chain.Add(FormattedSuffix),
         "string?",
         KnownTypes.RenderValue(renderer, path.Safe, path.Accessor),
         null,
         null,
         path.Remarks,
-        Description(path.Descriptions, "Formatted"));
+        Description(path.Descriptions, FormattedSuffix));
 
     /// <summary>
     /// Public instance properties with a public getter, and public instance fields, walking up the base chain.
@@ -463,7 +511,32 @@ internal static class Parser
             conversion.TypePre6 is null ? null : conversion.TypePre6 + annotation,
             conversion.BuildPre6?.Invoke(context),
             path.Remarks,
-            Description(path.Descriptions, segment));
+            Description(path.Descriptions, Marker(path, segment)));
+    }
+
+    /// <summary>
+    /// What to call the value within its member, for the description. Normally that is the conversion's own
+    /// suffix, but a conversion that landed on another table entry has already added a segment of its own,
+    /// and dropping it would leave every value under that entry marked alike.
+    /// </summary>
+    private static string? Marker(Path path, string? segment)
+    {
+        // Every member walked adds one chain segment and one description; anything past that came from a
+        // conversion.
+        var builder = new StringBuilder(32);
+        for (var i = path.Descriptions.Length; i < path.Chain.Count; i++)
+        {
+            if (builder.Length > 0) builder.Append('_');
+            builder.Append(path.Chain[i]);
+        }
+
+        if (segment is not null)
+        {
+            if (builder.Length > 0) builder.Append('_');
+            builder.Append(segment);
+        }
+
+        return builder.Length == 0 ? null : builder.ToString();
     }
 
     // -- helpers --------------------------------------------------------------------------------

@@ -363,6 +363,17 @@ type itself may never be generic.
 | Source type    | Output property |
 | :------------- | :- |
 | `TimeZoneInfo` | 2 properties: `string _Id` (`Id`) and `string _DisplayName` (`DisplayName`) |
+| `IPAddress`    | 4 properties: the address itself, `string _Formatted` (`ToString()`), `AddressFamily _AddressFamily`, `string _AddressFamily_Formatted` (`AddressFamily.ToString()`) |
+| `IPNetwork`    | NET8+. The network itself, `int _PrefixLength`, `string _Formatted`, and `_BaseAddress` flattened through the `IPAddress` row above — `_BaseAddress`, `_BaseAddress_Formatted`, `_BaseAddress_AddressFamily`, `_BaseAddress_AddressFamily_Formatted` |
+
+`IPAddress`'s rendered form is spelled out as `ToString()` rather than left to the
+[formattable rule](#formattable-types): it implements `IFormattable` explicitly, so that rule would reach it
+through a cast, and before NET6 it does not implement the interface at all — where the cast would throw.
+`IPNetwork` has no such problem, so its `_Formatted` is left to that rule, which casts.
+
+A row may land on a type that has a row of its own, as `IPNetwork._BaseAddress` lands on `IPAddress`. That
+row then takes over, its properties hanging off the segment that reached it — so `_BaseAddress` is the
+address itself, exactly as the bare name of the `IPAddress` row is.
 
 #### `NodaTime`:
 
@@ -408,7 +419,7 @@ object binds even where the graph cannot be flattened.
 
 `string`, `bool`, `char`, `System.Half`, `float`, `double`, `decimal`, 
 `byte`, `sbyte`, `short`, `int`, `long`, `ushort`, `uint`, `ulong`, `Int128`, `UInt128`,
-`Uri`, `Guid`, `Version`,
+`Uri`, `Guid`, `Version`, `Type`, `CultureInfo`,
 `DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly`
 
 Any `enum` is passed through as-is.

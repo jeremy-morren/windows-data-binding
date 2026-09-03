@@ -17,6 +17,13 @@ internal sealed class Conversion
     /// <summary>Return type is a reference type, so the property is always nullable.</summary>
     public bool IsReference { get; init; }
 
+    /// <summary>
+    /// Table key of the type this conversion lands on, when that type has an entry of its own. That entry
+    /// then takes over: its conversions hang off this one, and this one emits no property itself, the value
+    /// being whatever the entry it lands on chooses to call it.
+    /// </summary>
+    public string? Yields { get; init; }
+
     /// <summary>Guarded conversions always yield <c>T?</c>, even from a non-nullable chain.</summary>
     public bool ForceNullable { get; init; }
 

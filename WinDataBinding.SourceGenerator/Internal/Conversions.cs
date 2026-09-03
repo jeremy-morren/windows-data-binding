@@ -13,6 +13,17 @@ internal static class Conversions
     };
 
     /// <summary>
+    /// The value itself under a name of its own, for a type whose table entry gives it company.
+    /// </summary>
+    public static Conversion Self(string? suffix, string type, bool isReference = false) => new()
+    {
+        Suffix = suffix,
+        Type = type,
+        IsReference = isReference,
+        Build = context => context.Safe,
+    };
+
+    /// <summary>
     /// A member reached through a cast, for a type that implements the declaring interface explicitly.
     /// </summary>
     public static Conversion Cast(string? suffix, string type, string target, string tail) => new()
@@ -20,6 +31,16 @@ internal static class Conversions
         Suffix = suffix,
         Type = type,
         Build = context => $"(({target}){context.Safe}){context.Accessor}{tail}",
+    };
+
+    /// <summary>A tail landing on another type the table knows, which is flattened in its place.</summary>
+    public static Conversion Into(string suffix, string yields, string tail, bool isReference = false) => new()
+    {
+        Suffix = suffix,
+        Type = yields,
+        IsReference = isReference,
+        Yields = yields,
+        Build = context => context.Safe + context.Accessor + tail,
     };
 
     /// <summary>A tail whose target type only exists on NET6+, so both branches are emitted.</summary>

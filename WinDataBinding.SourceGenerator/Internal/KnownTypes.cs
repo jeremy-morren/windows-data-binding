@@ -21,6 +21,7 @@ internal static class KnownTypes
         "System.Int16", "System.Int32", "System.Int64", "System.Int128", 
         "System.UInt16", "System.UInt32", "System.UInt64", "System.UInt128",
         "System.Uri", "System.Guid", "System.Version",
+        "System.Type", "System.Globalization.CultureInfo",
         "System.DateTime", "System.DateTimeOffset", "System.TimeSpan",
         "System.DateOnly", "System.TimeOnly",
     };
@@ -32,6 +33,28 @@ internal static class KnownTypes
         [
             Tail("Id", "string", "Id", isReference: true),
             Tail("DisplayName", "string", "DisplayName", isReference: true),
+        ],
+
+        // The rendered form is spelled out rather than left to the formattable rule. IPAddress implements
+        // IFormattable explicitly, so that rule would reach it through a cast — and on netstandard2.0 it
+        // does not implement the interface at all, where the cast would throw. ToString() is neither.
+        ["System.Net.IPAddress"] =
+        [
+            Self(null, "global::System.Net.IPAddress", isReference: true),
+            Tail("Formatted", "string", "ToString()", isReference: true),
+            Tail("AddressFamily", "global::System.Net.Sockets.AddressFamily", "AddressFamily"),
+            // An enum names itself with the plain overload; the two-argument one is obsolete.
+            Tail("AddressFamily_Formatted", "string", "AddressFamily.ToString()", isReference: true),
+        ],
+
+        // NET8 and later. The address it is built on has an entry of its own, so that entry is applied on
+        // top of this one rather than repeated here. The rendered form is left to the formattable rule:
+        // IPNetwork implements IFormattable explicitly, which the cast that rule falls back to handles.
+        ["System.Net.IPNetwork"] =
+        [
+            Self(null, "global::System.Net.IPNetwork"),
+            Into("BaseAddress", "System.Net.IPAddress", "BaseAddress", isReference: true),
+            Tail("PrefixLength", "int", "PrefixLength"),
         ],
 
         // NodaTime

@@ -309,4 +309,108 @@ public class NodaTimeTests
         TestHarness.AssertGenerated(expected, source);
         TestHarness.AssertCompiles(source, Target.NetStandard20);
     }
+
+    [Theory]
+    [InlineData(Target.Net8)]
+    [InlineData(Target.NetStandard20)]
+    public void Splits_an_ip_address_into_its_parts(Target target)
+    {
+        var source = TestSources.Wrap("""
+            public class Model
+            {
+                /// <summary>Where it came from</summary>
+                public System.Net.IPAddress Host { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source, target);
+
+        result.Should().HaveNoDiagnostics();
+
+        result.Source.Should().Contain("public global::System.Net.IPAddress? Host => _source.Host;");
+        result.Source.Should().Contain("public string? Host_Formatted => _source.Host?.ToString();");
+
+        result.Source.Should().Contain(
+            "public global::System.Net.Sockets.AddressFamily? Host_AddressFamily => "
+            + "_source.Host?.AddressFamily;");
+        result.Source.Should().Contain(
+            "public string? Host_AddressFamily_Formatted => _source.Host?.AddressFamily.ToString();");
+
+        // IPAddress implements IFormattable explicitly on NET6+, and not at all before it. Either way the
+        // automatic twin must not appear beside the one the table names.
+        result.Source.Should().NotContain("Host__Formatted");
+        result.Source.Should().NotContain("(global::System.IFormattable)_source.Host");
+
+        // The description travels down every one of them.
+        result.Source.Should().Contain(
+            """[global::System.ComponentModel.Description("Where it came from")]""");
+        result.Source.Should().Contain(
+            """[global::System.ComponentModel.Description("Where it came from (AddressFamily)")]""");
+    }
+
+    [Fact]
+    public void Flattens_an_ip_network_through_the_address_it_is_built_on()
+    {
+        // IPNetwork is NET8 and later, so this one target only.
+        var source = TestSources.Wrap("""
+            public class Model
+            {
+                /// <summary>The subnet</summary>
+                public System.Net.IPNetwork Range { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        // The network itself takes the bare name.
+        result.Source.Should().Contain("public global::System.Net.IPNetwork Range => _source.Range;");
+        result.Source.Should().Contain("public int Range_PrefixLength => _source.Range.PrefixLength;");
+
+        // BaseAddress lands on IPAddress, whose own entry takes over from there — the bare name of that
+        // entry being the segment which reached it.
+        result.Source.Should().Contain(
+            "public global::System.Net.IPAddress? Range_BaseAddress => _source.Range.BaseAddress;");
+        result.Source.Should().Contain(
+            "public string? Range_BaseAddress_Formatted => _source.Range.BaseAddress?.ToString();");
+        result.Source.Should().Contain(
+            "public global::System.Net.Sockets.AddressFamily? Range_BaseAddress_AddressFamily => "
+            + "_source.Range.BaseAddress?.AddressFamily;");
+        result.Source.Should().Contain(
+            "public string? Range_BaseAddress_AddressFamily_Formatted => "
+            + "_source.Range.BaseAddress?.AddressFamily.ToString();");
+        // IPNetwork implements IFormattable explicitly, so the ordinary rule reaches it through a cast.
+        result.Source.Should().Contain(
+            "public string? Range_Formatted => "
+            + "((global::System.IFormattable)_source.Range)?.ToString(null, null);");
+
+        // The description follows every one of them down.
+        result.Source.Should().Contain(
+            """[global::System.ComponentModel.Description("The subnet (PrefixLength)")]""");
+        result.Source.Should().Contain(
+            """[global::System.ComponentModel.Description("The subnet (BaseAddress)")]""");
+        result.Source.Should().Contain(
+            """[global::System.ComponentModel.Description("The subnet (BaseAddress_AddressFamily)")]""");
+    }
+
+    [Fact]
+    public void Lifts_an_ip_network_reached_through_a_nullable_chain()
+    {
+        var source = TestSources.Wrap("""
+            public class Inner { public System.Net.IPNetwork Range { get; set; } }
+
+            public class Model { public Inner Inner { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain(
+            "public global::System.Net.IPNetwork? Inner_Range => _source.Inner?.Range;");
+        result.Source.Should().Contain(
+            "public int? Inner_Range_PrefixLength => _source.Inner?.Range.PrefixLength;");
+        result.Source.Should().Contain(
+            "public global::System.Net.IPAddress? Inner_Range_BaseAddress => "
+            + "_source.Inner?.Range.BaseAddress;");
+    }
 }

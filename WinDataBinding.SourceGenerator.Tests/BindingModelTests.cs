@@ -628,4 +628,48 @@ public class BindingModelTests
         Assert.Contains("public string? Address_Street => _source.Address_Street;", result.Body);
         Assert.Contains("public string? Address__Street => _source.Address?.Street;", result.Body);
     }
+
+    [Fact]
+    public void Binds_a_descriptive_type_without_traversing_it()
+    {
+        // Each of these is an object graph by shape and a single value by intent. Walking Type or
+        // CultureInfo would flatten hundreds of members, and Type's graph refers back to itself.
+        var source = TestSources.Wrap("""
+            public class Model
+            {
+                public System.Type Kind { get; set; }
+                public System.Globalization.CultureInfo Culture { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        result.Source.Should().Contain("public global::System.Type? Kind => _source.Kind;");
+        result.Source.Should().Contain(
+            "public global::System.Globalization.CultureInfo? Culture => _source.Culture;");
+
+        // Nothing is flattened out of them, and a leaf gets no rendered twin.
+        result.Source.Should().NotContain("Kind_");
+        result.Source.Should().NotContain("Culture_");
+    }
+
+    [Fact]
+    public void Binds_a_descriptive_type_before_net6_as_well()
+    {
+        var source = TestSources.Wrap("""
+            public class Model
+            {
+                public System.Type Kind { get; set; }
+                public System.Globalization.CultureInfo Culture { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source, Target.NetStandard20);
+
+        result.Source.Should().Contain("public global::System.Type? Kind => _source.Kind;");
+        result.Source.Should().Contain(
+            "public global::System.Globalization.CultureInfo? Culture => _source.Culture;");
+    }
 }
