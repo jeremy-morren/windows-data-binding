@@ -19,24 +19,20 @@ internal readonly record struct TypeMapping(ITypeSymbol TargetType, string Expre
 /// </summary>
 internal sealed class GeneratorOptions
 {
-    private const string SetupAttribute = "WinDataBinding.StrongIdTemplateSetupAttribute";
     private const string MapAttribute = "WinDataBinding.MapTypeAttribute";
 
-    public static readonly GeneratorOptions Empty = new(
-        [], new Dictionary<ISymbol, TypeMapping>(SymbolEqualityComparer.Default), []);
+    public static readonly GeneratorOptions Empty =
+        new(new Dictionary<ISymbol, TypeMapping>(SymbolEqualityComparer.Default), []);
 
-    private readonly Dictionary<string, StrongIdBinding> _strongIdTemplates;
     private readonly Dictionary<ISymbol, TypeMapping> _mappings;
 
     /// <summary>The same mappings in declaration order, for the walk up a type's interfaces and bases.</summary>
     private readonly List<(ITypeSymbol Source, TypeMapping Mapping)> _byHierarchy;
 
     private GeneratorOptions(
-        Dictionary<string, StrongIdBinding> strongIdTemplates,
         Dictionary<ISymbol, TypeMapping> mappings,
         List<(ITypeSymbol Source, TypeMapping Mapping)> byHierarchy)
     {
-        _strongIdTemplates = strongIdTemplates;
         _mappings = mappings;
         _byHierarchy = byHierarchy;
     }
@@ -45,7 +41,6 @@ internal sealed class GeneratorOptions
     {
         if (optionsType is null) return Empty;
 
-        var templates = new Dictionary<string, StrongIdBinding>(StringComparer.Ordinal);
         var mappings = new Dictionary<ISymbol, TypeMapping>(SymbolEqualityComparer.Default);
         var byHierarchy = new List<(ITypeSymbol Source, TypeMapping Mapping)>();
 
@@ -55,24 +50,13 @@ internal sealed class GeneratorOptions
         {
             foreach (var attribute in current.GetAttributes())
             {
-                switch (attribute.AttributeClass?.ToDisplayString(Formats.Match))
-                {
-                    case SetupAttribute:
-                        AddTemplate(attribute, templates);
-                        break;
-                    case MapAttribute:
-                        AddMapping(attribute, mappings, byHierarchy);
-                        break;
-                }
+                if (attribute.AttributeClass?.ToDisplayString(Formats.Match) == MapAttribute)
+                    AddMapping(attribute, mappings, byHierarchy);
             }
         }
 
-        return new GeneratorOptions(templates, mappings, byHierarchy);
+        return new GeneratorOptions(mappings, byHierarchy);
     }
-
-    /// <summary>The conversion declared for a custom strongly typed ID template, if there is one.</summary>
-    public bool TryGetStrongIdTemplate(string name, out StrongIdBinding binding) =>
-        _strongIdTemplates.TryGetValue(name, out binding);
 
     /// <summary>The type declared in place of a wrapper, if there is one.</summary>
     public bool TryGetMapping(ITypeSymbol type, out TypeMapping mapping)
@@ -112,34 +96,6 @@ internal sealed class GeneratorOptions
                 return true;
 
         return false;
-    }
-
-    private static void AddTemplate(AttributeData attribute, Dictionary<string, StrongIdBinding> templates)
-    {
-        if (attribute.ConstructorArguments.Length < 3) return;
-
-        if (attribute.ConstructorArguments[0].Value is not string name ||
-            attribute.ConstructorArguments[1].Value is not ITypeSymbol valueType ||
-            attribute.ConstructorArguments[2].Value is not string property)
-            return;
-
-        // The most derived setup for a template name wins.
-        if (templates.ContainsKey(name)) return;
-
-        // Whether the ID implements IFormattable cannot be checked here:
-        // that part of the struct is written by StronglyTypedId's generator.
-        // The setup declares it instead.
-        var formattable = attribute.ConstructorArguments.Length < 4 ||
-                          attribute.ConstructorArguments[3].Value is not bool declared || declared;
-
-        templates.Add(name, new StrongIdBinding(
-            valueType.ToDisplayString(Formats.Type),
-            valueType.IsReferenceType,
-            property,
-            // The twin renders the ID itself, and the half of it that implements IFormattable is written by
-            // another generator. Nothing here can see how, so it is reached through a cast.
-            formattable ? Renderer.FormattableByCast : Renderer.None,
-            RendersSelf: true));
     }
 
     private static void AddMapping(

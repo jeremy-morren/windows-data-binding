@@ -79,21 +79,6 @@ internal static class KnownTypes
     };
 
     /// <summary>
-    /// The four built-in StronglyTypedId templates. 
-    /// The underlying type comes from the template rather than from the struct's own Value member: 
-    /// that member is written by another source generator, and generators cannot see each other's output.
-    /// </summary>
-    private static readonly Dictionary<string, StrongIdBinding> StrongIdTemplates = new(StringComparer.Ordinal)
-    {
-        // The twin renders the underlying value, which is a type we know formats itself.
-        ["Guid"] = new("global::System.Guid", false, "Value", Renderer.FormattableDirect),
-        ["Int"] = new("int", false, "Value", Renderer.FormattableDirect),
-        ["Long"] = new("long", false, "Value", Renderer.FormattableDirect),
-        // string is already text, so it gets no rendered twin.
-        ["String"] = new("string", true, "Value", Renderer.None),
-    };
-
-    /// <summary>
     /// Renders a whole value as text: <c>IFormattable</c>, <c>JsonNode</c>, or <c>JsonElement</c>.
     /// </summary>
     public static string RenderValue(Renderer renderer, string safe, string accessor) => renderer switch
@@ -129,9 +114,6 @@ internal static class KnownTypes
     }
 
     public static bool IsLeaf(string fullName) => LeafTypes.Contains(fullName);
-
-    public static bool TryGetStrongIdTemplate(string template, out StrongIdBinding binding) =>
-        StrongIdTemplates.TryGetValue(template, out binding);
 
     public static bool TryGetConversions(string fullName, out Conversion[] conversions) =>
         ConversionsByType.TryGetValue(fullName, out conversions!);

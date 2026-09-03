@@ -518,4 +518,26 @@ public class MapTypeTests
         result.Source.Should().Contain("public decimal? G => _source.G?.V;");
         result.Source.Should().NotContain("G_Formatted");
     }
+
+    [Fact]
+    public void Ignores_attributes_it_does_not_understand()
+    {
+        var source = Wrap("""
+            [System.Obsolete]
+            [MapType(typeof(Boxed), typeof(int), "Value")]
+            public class BindingOptions;
+
+            public class Boxed { public int Value { get; } }
+
+            public class Model { public Boxed Count { get; set; } }
+
+            [GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
+            public sealed partial class ModelBinder { }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+        result.Source.Should().Contain("public int? Count => _source.Count?.Value;");
+    }
 }

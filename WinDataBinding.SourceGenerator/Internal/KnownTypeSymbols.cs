@@ -17,12 +17,9 @@ namespace WinDataBinding.SourceGenerator.Internal;
 /// </remarks>
 internal sealed class KnownTypeSymbols(Compilation compilation)
 {
-    private const string StrongIdAttribute = "StronglyTypedIds.StronglyTypedIdAttribute";
-    private const string StrongIdTemplate = "StronglyTypedIds.Template";
     private const string BinderAttribute = "WinDataBinding.GenerateWindowsBindingModelAttribute";
 
     private readonly Dictionary<ISymbol, TypeTraits> _traits = new(SymbolEqualityComparer.Default);
-    private readonly Dictionary<ISymbol, StrongId> _strongIds = new(SymbolEqualityComparer.Default);
 
     private readonly Dictionary<string, INamedTypeSymbol?> _resolved = new(StringComparer.Ordinal);
 
@@ -129,16 +126,6 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
     /// <summary>How to read the number of items the type holds.</summary>
     public CountAccess GetCount(ITypeSymbol type) => Get(type).Count;
 
-    /// <summary>Whether the type is a strongly typed ID, and if so which template declared it.</summary>
-    public StrongId GetStrongId(ITypeSymbol type)
-    {
-        if (_strongIds.TryGetValue(type, out var cached)) return cached;
-
-        var strongId = ComputeStrongId(type);
-        _strongIds[type] = strongId;
-        return strongId;
-    }
-
     private INamedTypeSymbol? Resolve(string metadataName)
     {
         if (_resolved.TryGetValue(metadataName, out var cached)) return cached;
@@ -214,68 +201,11 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
         return false;
     }
 
-    private static StrongId ComputeStrongId(ITypeSymbol type)
-    {
-        foreach (var attribute in type.GetAttributes())
-        {
-            if (attribute.AttributeClass?.ToDisplayString(Formats.Match) != StrongIdAttribute) continue;
+    private static ITypeSymbol Unwrap(ITypeSymbol type) =>
+        IsNullableValue(type) ? ((INamedTypeSymbol)type).TypeArguments[0] : type;
 
-            // A built-in template is an enum argument; anything else names a custom template.
-            if (attribute.ConstructorArguments.Length > 0 &&
-                attribute.ConstructorArguments[0] is { Kind: TypedConstantKind.Enum } argument &&
-                argument.Type?.ToDisplayString(Formats.Match) == StrongIdTemplate &&
-                TemplateName(argument) is { } template)
-                return new StrongId(StrongIdKind.Template, template, ImmutableArray<string>.Empty);
-
-            // Otherwise custom templates name it. 
-            // Both of the attribute's constructors take those as a 'params string[]',
-            // so the names arrive as an array argument, not as strings.
-            // A bare [StronglyTypedId] passes an empty array and so names none.
-            return new StrongId(StrongIdKind.Custom, null, CustomTemplates(attribute.ConstructorArguments));
-        }
-
-        return StrongId.None;
-    }
-
-    /// <summary>
-    /// Every custom template named by the attribute, in the order given. 
-    /// Which of them applies depends on the generation options, which are not known here.
-    /// </summary>
-    private static ImmutableArray<string> CustomTemplates(ImmutableArray<TypedConstant> arguments)
-    {
-        var names = ImmutableArray.CreateBuilder<string>();
-
-        foreach (var argument in arguments)
-        {
-            // Kind has to be tested first: reading Value on an array argument throws.
-            if (argument.Kind == TypedConstantKind.Array)
-            {
-                if (argument.Values.IsDefaultOrEmpty) continue;
-
-                foreach (var element in argument.Values)
-                    if (element.Value is string name)
-                        names.Add(name);
-            }
-            else if (argument.Value is string name)
-            {
-                names.Add(name);
-            }
-        }
-
-        return names.ToImmutable();
-    }
-
-    /// <summary>The enum member's name, which is what the template table is keyed by.</summary>
-    private static string? TemplateName(TypedConstant argument)
-    {
-        if (argument.Type is not INamedTypeSymbol enumType) return null;
-
-        foreach (var member in enumType.GetMembers())
-            if (member is IFieldSymbol { HasConstantValue: true } field && Equals(field.ConstantValue, argument.Value))
-                return field.Name;
-
-        return null;
-    }
+    private static bool IsNullableValue(ITypeSymbol type) =>
+        type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
 
     /// <summary>
     /// How many items the type holds, read the way the type actually spells it.
@@ -375,12 +305,6 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
 
         return false;
     }
-
-    private static ITypeSymbol Unwrap(ITypeSymbol type) =>
-        IsNullableValue(type) ? ((INamedTypeSymbol)type).TypeArguments[0] : type;
-
-    private static bool IsNullableValue(ITypeSymbol type) =>
-        type.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T;
 
     /// <summary>The <c>T</c> of the sequence, or null when the type is not one.</summary>
     private static ITypeSymbol? ElementType(ITypeSymbol type)

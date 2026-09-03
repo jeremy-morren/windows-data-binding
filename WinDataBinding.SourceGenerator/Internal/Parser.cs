@@ -213,13 +213,11 @@ internal static class Parser
     private static void Walk(
         INamedTypeSymbol type, Path path, ImmutableHashSet<INamedTypeSymbol> visited, KnownTypeSymbols known,
         GeneratorOptions options, List<Candidate> candidates, List<DiagnosticInfo> diagnostics,
-        LocationInfo? location, CancellationToken ct, string? exclude = null, bool bare = true)
+        LocationInfo? location, CancellationToken ct, bool bare = true)
     {
         foreach (var (member, memberType) in GetMembers(type))
         {
             ct.ThrowIfCancellationRequested();
-
-            if (exclude is not null && member.Name == exclude) continue;
 
             var next = path.Append(member, memberType, known);
             var underlying = Unwrap(memberType);
@@ -283,36 +281,6 @@ internal static class Parser
                     candidates.Add(Convert(next, conversion, tail));
 
                 AddFormatted(next, renderer, candidates);
-                continue;
-            }
-
-            var strongId = known.GetStrongId(underlying);
-            if (strongId.Kind != StrongIdKind.None)
-            {
-                if (!TryBind(strongId, options, out var binding))
-                {
-                    diagnostics.Add(DiagnosticInfo.Create(Diagnostics.CustomStrongIdTemplate,
-                        location, next.Chain.ToString(), underlying.Name));
-                    continue;
-                }
-
-                // Whatever the ID declares in source binds too.
-                // Its generated members, the value property among them, are invisible to us, 
-                // so only what is statically there is reachable here.
-                var id = underlying as INamedTypeSymbol;
-                var walk = id is not null && !visited.Contains(id);
-                var alone = bare && (!walk || !HasMembersBesides(id!, binding.PropertyName));
-
-                // Standing alone the value takes the bare name; sharing with members it takes a suffix.
-                var suffix = alone ? null : binding.PropertyName;
-                candidates.Add(Convert(next, Conversions.Tail(
-                    suffix, binding.ValueType, binding.PropertyName, binding.IsReference)));
-
-                if (walk)
-                    Walk(id!, next, visited.Add(id!), known, options, candidates, diagnostics, location, ct,
-                        binding.PropertyName);
-
-                AddStrongIdFormatted(next, binding, suffix, candidates);
                 continue;
             }
 
@@ -387,53 +355,6 @@ internal static class Parser
     /// <summary>Joins two descriptions the way one chain of summaries is joined.</summary>
     private static string? Join(string? left, string? right) =>
         left is null ? right : right is null ? left : left + ": " + right;
-
-    private static bool HasMembersBesides(INamedTypeSymbol type, string exclude)
-    {
-        foreach (var (member, _) in GetMembers(type))
-            if (member.Name != exclude)
-                return true;
-
-        return false;
-    }
-
-    /// <summary>
-    /// The rendered twin of a strongly typed ID's value. 
-    /// Unlike other leaf values, an ID gets one: the point of the wrapper is that the raw value rarely means anything on its own.
-    /// </summary>
-    private static void AddStrongIdFormatted(
-        Path path, StrongIdBinding binding, string? suffix, List<Candidate> candidates)
-    {
-        if (binding.Renderer == Renderer.None) return;
-
-        var target = binding.RendersSelf ? path.Safe : path.Safe + path.Accessor + binding.PropertyName;
-        var accessor = binding.RendersSelf ? path.Accessor : binding.IsReference ? "?." : ".";
-        var chain = suffix is null ? path.Chain : path.Chain.Add(suffix);
-
-        candidates.Add(new Candidate(
-            chain.Add("Formatted"),
-            "string?",
-            KnownTypes.RenderValue(binding.Renderer, target, accessor),
-            null,
-            null,
-            path.Remarks,
-            Description(path.Descriptions, "Formatted")));
-    }
-
-    /// <summary>How the strongly typed ID exposes its value: a built-in template, or one the options declare.</summary>
-    private static bool TryBind(StrongId strongId, GeneratorOptions options, out StrongIdBinding binding)
-    {
-        if (strongId.Kind == StrongIdKind.Template && strongId.Template is { } template)
-            return KnownTypes.TryGetStrongIdTemplate(template, out binding);
-
-        // One configuration per ID: the first template the options describe, in the order the ID named them.
-        foreach (var custom in strongId.CustomTemplates)
-            if (options.TryGetStrongIdTemplate(custom, out binding))
-                return true;
-
-        binding = default;
-        return false;
-    }
 
     /// <summary>
     /// Appends the rendered form of a member that can format itself, after everything else that member produced. 

@@ -283,7 +283,7 @@ Two rules differ from the source object:
   is nothing to flatten, and the property already binds as it stands.
 
 A value that would otherwise have taken the bare name gets a `_Value` segment instead, so nothing is lost: a
-`Duration` becomes `Elapsed_Value` (a `TimeSpan`), a strongly typed ID becomes `Order_Value`, and a
+`Duration` becomes `Elapsed_Value` (a `TimeSpan`), and a
 [mapped](#mapping-a-wrapper-onto-the-type-it-wraps) wrapper becomes `Declared_Value` whatever shape it maps
 to. A conversion that names its own properties is unaffected — `TimeZoneInfo` still yields `_Id` and
 `_DisplayName`.
@@ -339,7 +339,8 @@ already compiled, generated half and all, so it is walked as any other object wo
 ## Types
 
 A property is either *simple* — bound directly, with the object never traversed — or an *object graph*, which
-is flattened. Value types, enums, collections, strongly typed IDs, `JsonNode` and `JsonElement` are all simple.
+is flattened. Value types, enums, collections, [mapped](#mapping-a-wrapper-onto-the-type-it-wraps)
+wrappers, `JsonNode` and `JsonElement` are all simple.
 
 The `<remarks>` cref names the type each member is declared on. A cref lives in an XML attribute, where an
 angle bracket is illegal, so a generic is written with braces around its type *parameters* —
@@ -464,10 +465,9 @@ A type is renderable if it is any of these:
 | `System.Text.Json.JsonElement`                              | `Property.GetRawText()` |
 
 `ToString(null, null)` is called directly whenever the type offers it publicly — `int`, `Guid`, every
-`NodaTime` value, a strongly typed ID's underlying value. The cast is the fallback, for a type that
-implements `IFormattable` explicitly, one carrying a second two-parameter `ToString` that would make the call
-ambiguous, and a custom strongly typed ID declared `isFormattable`, whose implementation is written by
-another generator and so cannot be seen from here. Calling directly avoids boxing a struct on every read.
+`NodaTime` value. The cast is the fallback, for a type that implements `IFormattable` explicitly, and for one
+carrying a second two-parameter `ToString` that would make the call ambiguous. Calling directly avoids boxing
+a struct on every read.
 
 This applies to a bare property and to one reached through the object graph alike:
 
@@ -493,106 +493,16 @@ public double? Inner_Reading_Degrees => _source.Inner?.Reading.Degrees;
 public string? Inner_Reading_Formatted => _source.Inner?.Reading.ToString(null, null);
 ```
 
-#### Strongly typed IDs
-
-A strongly typed ID is a simple type: it binds to its underlying value and is never traversed.
-A [strongly typed ID](https://github.com/andrewlock/StronglyTypedId) declared with one of the four built-in
-templates is treated as a Simple type (traversed to `.Value`).
-
-```csharp
-[StronglyTypedId(Template.Guid)]
-public readonly partial struct OrderId;
-
-public class Model { public OrderId Order { get; set; } }
-```
-
-gives
-
-```csharp
-/// <summary><c>Order.Value</c></summary>
-/// <remarks><see cref="Demo.Model.Order"/></remarks>
-public global::System.Guid Order => _source.Order.Value;
-```
-
-The value also gets the usual rendered twin, except for `TemplateId.String` (which just returns `Value`):
-`public string? Order_Formatted => _source.Order.Value.ToString(null, null);`.
-
-A built-in template alongside a custom one (`[StronglyTypedId(Template.Int, "int-efcore")]`) is fine.
-
-#### What an ID declares itself
-
-The hand-written part of the ID struct is walked like any other graph — its generated part, the value
-property among it, stays invisible, since generators cannot see each other's output. When the ID declares
-nothing else the value keeps the bare name; when it does, the value takes the value-property suffix so it
-sits alongside them:
-
-```csharp
-[StronglyTypedId(Template.Guid)]
-public readonly partial struct OrderId
-{
-    public CustomerId Customer { get; }   // another strongly typed ID
-    public string Label { get; }          // a simple type
-    public Detail Detail { get; }         // an object graph
-}
-
-public class Model { public OrderId Order { get; set; } }
-```
-
-gives
-
-```csharp
-public global::System.Guid Order_Value  => _source.Order.Value;      // suffixed: it has company
-public string? Order_Value_Formatted    => /* rendered twin */;
-public int Order_Customer               => _source.Order.Customer.Value;
-public int? Order_Customer_Formatted    => /* rendered twin */;
-public string? Order_Label              => _source.Order.Label;
-public global::Demo.Detail? Order_Detail => _source.Order.Detail;
-public int? Order_Detail_Count          => _source.Order.Detail?.Count;
-```
-
-A **custom** template has to be described first, because the property holding the underlying value is written
-by StronglyTypedId's own generator, and generators cannot see each other's output. Describe it with
-`[StrongIdTemplateSetup]` on a generation options type, then pass that type as the second argument:
-
-```csharp
-[StrongIdTemplateSetup("my-guid", typeof(Guid), "Value")]
-public class BindingOptions;
-
-[StronglyTypedId("my-guid")]
-public readonly partial struct OrderId;
-
-public class Model { public OrderId Order { get; set; } }
-
-[GenerateWindowsBindingModel(typeof(Model), typeof(BindingOptions))]
-public sealed partial class ModelBinder { }
-```
-
-gives `public global::System.Guid Order => _source.Order.Value;`.
-
-An ID may name several custom templates (`[StronglyTypedId("Template2", "Template1")]`), but takes one
-configuration: the first of those names the options describe wins, in the order the ID names them. Names are
-matched ordinally, so case has to agree. A built-in template beside custom ones
-(`[StronglyTypedId(Template.String, "OtherTemplate")]`) wins over all of them.
-
-Without a matching setup, a custom template is skipped and `WGD005` is reported. So is a bare
-`[StronglyTypedId]`: it defaults to `Template.Guid`, but that default can be changed for a whole assembly,
-and guessing wrong would emit a `Guid` property over an `int` backing field.
-
 ## Generation options
 
 The second argument to `[GenerateWindowsBindingModel]` names a type carrying configuration attributes. It
 need not derive from anything and is never instantiated — only its attributes are read. Attributes on its
-base types are read too, with the most derived declaration of a template name winning, and attributes the
-generator does not understand are ignored.
+base types are read too, with the most derived declaration for a type winning, and attributes the generator
+does not understand are ignored.
 
-| Attribute                        | Purpose |
-| :------------------------------- | :- |
-| `StrongIdTemplateSetupAttribute` | Describes a custom `StronglyTypedId` template: the template name to match, the type of the underlying value, the name of the property holding it, and optionally `isFormattable` (default `true`). Repeatable. |
-| `MapTypeAttribute`               | Stands a wrapper type in for the type it wraps: the wrapper, the type it wraps, and the expression reaching the wrapped value. Repeatable. |
-
-`isFormattable` says whether **the ID struct** implements `IFormattable`. That cannot be checked here: the
-interface is declared by StronglyTypedId's own generator, and generators cannot see each other's output. Pass
-`false` and no rendered twin is emitted; leave it and the twin renders the ID itself.
+| Attribute          | Purpose |
+| :----------------- | :- |
+| `MapTypeAttribute` | Stands a wrapper type in for the type it wraps: the wrapper, the type it wraps, and the expression reaching the wrapped value. Repeatable. |
 
 ### Mapping a wrapper onto the type it wraps
 
@@ -647,14 +557,14 @@ public class BindingOptions;
 
 An exact mapping for a type always beats an inherited one, wherever the two are declared.
 
-That form is the answer to a strongly typed ID **declared in another assembly**. `StronglyTypedIds`' own
-attribute is marked `[Conditional]`, so the compiler never writes it into the assembly — a generator running
-in a project that merely *references* those IDs sees them as metadata with no attribute left to read, and
-`[StrongIdTemplateSetup]` has nothing to match on. The marker interface a template adds does survive, so
-mapping that interface reaches every ID at once. In the project that declares the IDs the attribute is right
-there in source, and the ordinary strong-ID handling applies.
+That form is what makes a generated wrapper such as a
+[strongly typed ID](https://github.com/andrewlock/StronglyTypedId) workable. Those IDs are declared by an
+attribute the compiler never writes into the assembly — `StronglyTypedIds`' own is marked `[Conditional]` —
+so a generator in a project that merely *references* them has nothing to read: no attribute, and a `Value`
+property written by a generator it cannot see. The marker interface a template adds does survive into
+metadata, so mapping that one interface reaches every ID at once, in every assembly.
 
-Two things `[MapType]` deliberately does not do. It renders the *mapped value*, never the wrapper, so unlike
-`[StrongIdTemplateSetup]` it emits no twin for a wrapper that is itself `IFormattable` — what comes out is
-whatever the target earns. And it matches a named type exactly, so a closed generic must be named as one.
+Two things `[MapType]` deliberately does not do. It renders the *mapped value*, never the wrapper, so a
+wrapper that is itself `IFormattable` gets no twin of its own — what comes out is whatever the target earns.
+And it matches a named type exactly, so a closed generic must be named as one.
 

@@ -28,9 +28,6 @@ namespace WinDataBinding
         /// The generation options is a class decorated with attributes that the source generator understands. Available attributes:
         /// <list type="bullet">
         /// <item>
-        /// <description><see cref="StrongIdTemplateSetupAttribute"/>Configures strong ID template setup for the generation options.</description>
-        /// </item>
-        /// <item>
         /// <description><see cref="MapTypeAttribute"/>Maps a wrapper type onto the type it wraps.</description>
         /// </item>
         /// </list>

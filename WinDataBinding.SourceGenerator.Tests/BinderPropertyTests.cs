@@ -90,49 +90,6 @@ public class BinderPropertyTests
     }
 
     [Fact]
-    public void Names_a_declared_strong_ids_value_rather_than_leaving_it_bare()
-    {
-        // Standing alone on the source the value would take the bare name; here that name is taken.
-        var source = $$"""
-            using StronglyTypedIds;
-            using WinDataBinding;
-
-            namespace StronglyTypedIds
-            {
-                public enum Template { Guid, Int, String, Long }
-
-                [System.AttributeUsage(System.AttributeTargets.Struct)]
-                public sealed class StronglyTypedIdAttribute : System.Attribute
-                {
-                    public StronglyTypedIdAttribute(Template template, params string[] templateNames) { }
-                    public StronglyTypedIdAttribute(params string[] templateNames) { }
-                }
-            }
-
-            namespace Demo
-            {
-                [StronglyTypedId(Template.Guid)]
-                public readonly partial struct OrderId { public System.Guid Value { get; } }
-
-                public class Model { public int Id { get; set; } }
-
-                [GenerateWindowsBindingModel(typeof(Model))]
-                public sealed partial class ModelBinder
-                {
-                    public OrderId? Order { get; set; }
-                }
-            }
-            """;
-
-        var result = TestHarness.AssertCompiles(source);
-
-        result.Should().HaveNoDiagnostics();
-        result.Source.Should().Contain("public global::System.Guid? Order_Value => this.Order?.Value;");
-        result.Source.Should().Contain(
-            "public string? Order_Value_Formatted => this.Order?.Value.ToString(null, null);");
-    }
-
-    [Fact]
     public void Names_a_declared_conversions_value_rather_than_leaving_it_bare()
     {
         var source = Wrap(
