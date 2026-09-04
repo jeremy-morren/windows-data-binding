@@ -1,0 +1,118 @@
+name: Build
+
+on:
+  # Pushes to main, and to 'actions' for working on this file itself
+  push:
+    branches: [ main, actions ]
+  # Any pull request
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    permissions:
+      # Required by EnricoMi/publish-unit-test-result-action, which writes a check run and,
+      # on a pull request, a comment
+      checks: write
+      pull-requests: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          # global.json pins the SDK; this only has to be able to satisfy it
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        # The TRX report comes from Microsoft.Testing.Extensions.TrxReport, referenced by the test project
+        run: >-
+          dotnet test --project test/WinDataBinding.SourceGenerator.Tests/WinDataBinding.SourceGenerator.Tests.csproj
+          -c Release --no-build
+          --report-trx --results-directory ${{ runner.temp }}/TestResults
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: test-results
+          path: ${{ runner.temp }}/TestResults
+
+      # Adds a check run, and a comment when this is a pull request
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: ${{ always() }}
+        with:
+          files: ${{ runner.temp }}/TestResults/**/*.trx
+
+      - name: Pack
+        run: dotnet pack -c Release --no-build -o ${{ github.workspace }}/artifacts
+
+      # The version is whatever the package says it is, rather than a second copy of it kept in the
+      # workflow: version.props decides, and pack is what resolves it
+      - name: Read the packed version
+        id: version
+        run: |
+          set -euo pipefail
+          nupkg="$(ls artifacts/*.nupkg | head -1)"
+          version="$(unzip -p "$nupkg" '*.nuspec' \
+            | sed -n 's|.*<version>\(.*\)</version>.*|\1|p' | head -1)"
+          test -n "$version"
+          echo "Packed $(basename "$nupkg") as $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: artifacts/*.nupkg
+          if-no-files-found: error
+
+  # A draft release, for manual review before anything is published
+  release:
+    name: Release draft
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      VERSION: v${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: artifacts
+
+      # An existing release is left exactly as it is, draft or published: a draft may already have had
+      # its notes edited by hand, and a published one is history
+      - name: Create draft release
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists, leaving it untouched."
+            exit 0
+          fi
+          gh release create "$VERSION" \
+            --draft \
+            --title "$VERSION" \
+            --generate-notes \
+            --target "$GITHUB_SHA"
+          gh release upload "$VERSION" artifacts/*.nupkg

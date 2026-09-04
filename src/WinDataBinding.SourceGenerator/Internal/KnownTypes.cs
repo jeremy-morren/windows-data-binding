@@ -1,0 +1,170 @@
+using static WinDataBinding.SourceGenerator.Internal.Conversions;
+
+namespace WinDataBinding.SourceGenerator.Internal;
+
+/// <summary>
+/// The type table: which types are bound directly, and which need converting first. 
+/// Types are matched by namespace-qualified name, so no reference to e.g. NodaTime is required.
+/// </summary>
+/// <remarks>
+/// Both tables are built once by the type initialiser and never written to afterwards, 
+/// so the concurrent reads Roslyn may make of them need no synchronisation. Keep them read-only.
+/// </remarks>
+internal static class KnownTypes
+{
+    /// <summary>Types bound directly, with no further traversal.</summary>
+    private static readonly HashSet<string> LeafTypes = new(StringComparer.Ordinal)
+    {
+        "System.String", "System.Boolean", "System.Char",
+        "System.Half", "System.Single", "System.Double", "System.Decimal",
+        "System.Byte", "System.SByte", 
+        "System.Int16", "System.Int32", "System.Int64", "System.Int128", 
+        "System.UInt16", "System.UInt32", "System.UInt64", "System.UInt128",
+        "System.Uri", "System.Guid", "System.Version",
+        "System.Type", "System.Globalization.CultureInfo",
+        "System.Numerics.BigInteger", "System.Text.Rune", "System.Index",
+        "System.DateTime", "System.DateTimeOffset", "System.TimeSpan",
+        "System.DateOnly", "System.TimeOnly",
+    };
+
+    private static readonly Dictionary<string, Conversion[]> ConversionsByType = new(StringComparer.Ordinal)
+    {
+        // Common
+        ["System.TimeZoneInfo"] =
+        [
+            Tail("Id", "string", "Id", isReference: true),
+            Tail("DisplayName", "string", "DisplayName", isReference: true),
+        ],
+
+        // The rendered form is spelled out rather than left to the formattable rule. IPAddress implements
+        // IFormattable explicitly, so that rule would reach it through a cast — and on netstandard2.0 it
+        // does not implement the interface at all, where the cast would throw. ToString() is neither.
+        ["System.Net.IPAddress"] =
+        [
+            Self(null, "global::System.Net.IPAddress", isReference: true),
+            Tail("Formatted", "string", "ToString()", isReference: true),
+            Tail("AddressFamily", "global::System.Net.Sockets.AddressFamily", "AddressFamily"),
+            // An enum names itself with the plain overload; the two-argument one is obsolete.
+            Tail("AddressFamily_Formatted", "string", "AddressFamily.ToString()", isReference: true),
+        ],
+
+        // NET8 and later. The address it is built on has an entry of its own, so that entry is applied on
+        // top of this one rather than repeated here. The rendered form is left to the formattable rule:
+        // IPNetwork implements IFormattable explicitly, which the cast that rule falls back to handles.
+        ["System.Net.IPNetwork"] =
+        [
+            Self(null, "global::System.Net.IPNetwork"),
+            Into("BaseAddress", "System.Net.IPAddress", "BaseAddress", isReference: true),
+            Tail("PrefixLength", "int", "PrefixLength"),
+        ],
+
+        // Walking an exception reaches TargetSite, a whole reflection graph, and Data, a dictionary.
+        // What is worth having is the message, where it came from, and ToString() for the whole story:
+        // type, message, stack trace and every inner exception at once.
+        ["System.Exception"] =
+        [
+            Self(null, "global::System.Exception", isReference: true),
+            Tail("Message", "string", "Message", isReference: true),
+            Tail("StackTrace", "string", "StackTrace", isReference: true),
+            Tail("Display", "string", "ToString()", isReference: true),
+        ],
+
+        // A row adds to the rows of the type's bases, so each of these carries the four above as well.
+        ["System.ArgumentException"] =
+        [
+            Tail("ParamName", "string", "ParamName", isReference: true),
+        ],
+        ["System.ArgumentOutOfRangeException"] =
+        [
+            Tail("ActualValue", "object", "ActualValue", isReference: true),
+        ],
+        ["System.Net.Http.HttpRequestException"] =
+        [
+            // StatusCode arrived in NET5. Before that the member is simply not there to read.
+            Optional("StatusCode", "global::System.Net.HttpStatusCode", "StatusCode", "StatusCode"),
+        ],
+
+        // NodaTime
+        ["NodaTime.DateTimeZone"] = [Tail(null, "string", "Id", isReference: true)],
+        ["NodaTime.Instant"] = [Tail(null, "global::System.DateTime", "ToDateTimeUtc()")],
+        // The instant itself is the bare property; the three views of it that a grid may want to show
+        // separately hang off it. OffsetDateTime has no ToDateTimeUtc() of its own, hence the trip through
+        // ToInstant(); ZonedDateTime does, and its own methods say what they mean.
+        ["NodaTime.OffsetDateTime"] =
+        [
+            Tail(null, "global::System.DateTimeOffset", "ToDateTimeOffset()"),
+            Tail("Utc", "global::System.DateTime", "ToInstant().ToDateTimeUtc()"),
+            Tail("Local", "global::System.DateTime", "LocalDateTime.ToDateTimeUnspecified()"),
+            Tail("Offset", "global::System.TimeSpan", "Offset.ToTimeSpan()"),
+        ],
+        ["NodaTime.ZonedDateTime"] =
+        [
+            Tail(null, "global::System.DateTimeOffset", "ToDateTimeOffset()"),
+            Tail("Utc", "global::System.DateTime", "ToDateTimeUtc()"),
+            Tail("Local", "global::System.DateTime", "ToDateTimeUnspecified()"),
+            Tail("Offset", "global::System.TimeSpan", "Offset.ToTimeSpan()"),
+            Tail("Timezone", "string", "Zone.Id", isReference: true),
+        ],
+        ["NodaTime.LocalDateTime"] = [Tail(null, "global::System.DateTime", "ToDateTimeUnspecified()")],
+        ["NodaTime.LocalDate"] =
+        [
+            TfmTail(null, "global::System.DateOnly", "ToDateOnly()",
+                          "global::System.DateTime", "ToDateTimeUnspecified()"),
+        ],
+        ["NodaTime.LocalTime"] = [LocalTime()],
+        ["NodaTime.Duration"] = [Tail(null, "global::System.TimeSpan", "ToTimeSpan()")],
+        ["NodaTime.Offset"] = [Tail(null, "global::System.TimeSpan", "ToTimeSpan()")],
+        ["NodaTime.YearMonth"] =
+        [
+            TfmTail(null, "global::System.DateOnly", "OnDayOfMonth(1).ToDateOnly()",
+                          "global::System.DateTime", "OnDayOfMonth(1).ToDateTimeUnspecified()"),
+        ],
+        ["NodaTime.Interval"] =
+        [
+            Guarded("Start", "global::System.DateTime", ["HasStart"], "Start.ToDateTimeUtc()"),
+            Guarded("End", "global::System.DateTime", ["HasEnd"], "End.ToDateTimeUtc()"),
+            Guarded("Duration", "global::System.TimeSpan", ["HasStart", "HasEnd"], "Duration.ToTimeSpan()"),
+        ],
+        ["NodaTime.Period"] = [Tail(null, "string", "ToString()", isReference: true)],
+    };
+
+    /// <summary>
+    /// Renders a whole value as text: <c>IFormattable</c>, <c>JsonNode</c>, or <c>JsonElement</c>.
+    /// </summary>
+    public static string RenderValue(Renderer renderer, string safe, string accessor) => renderer switch
+    {
+        Renderer.Enum => $"{safe}{accessor}ToString()",
+        Renderer.FormattableDirect => $"{safe}{accessor}ToString(null, null)",
+        Renderer.FormattableByCast => $"((global::System.IFormattable){safe})?.ToString(null, null)",
+        Renderer.JsonNode => $"{safe}{accessor}ToJsonString()",
+        Renderer.JsonElement => $"{safe}{accessor}GetRawText()",
+        _ => throw new ArgumentOutOfRangeException(nameof(renderer)),
+    };
+
+    /// <summary>
+    /// Renders one element of a sequence, inside the lambda that joins them.
+    /// An element that can be null is reached through <c>?.</c>, and the null that comes back joins as an
+    /// empty entry rather than throwing.
+    /// </summary>
+    public static string RenderElement(Renderer renderer, string item, bool lifted)
+    {
+        var reach = lifted ? "?." : ".";
+
+        return renderer switch
+        {
+            Renderer.Enum => $"{item}{reach}ToString()",
+            Renderer.FormattableDirect => $"{item}{reach}ToString(null, null)",
+            Renderer.FormattableByCast => $"((global::System.IFormattable){item}){reach}ToString(null, null)",
+            // Text never reaches here: a sequence of strings is joined without projecting it first.
+            Renderer.Text => item,
+            Renderer.JsonNode => $"{item}?.ToJsonString()",
+            Renderer.JsonElement => $"{item}{reach}GetRawText()",
+            _ => throw new ArgumentOutOfRangeException(nameof(renderer)),
+        };
+    }
+
+    public static bool IsLeaf(string fullName) => LeafTypes.Contains(fullName);
+
+    public static bool TryGetConversions(string fullName, out Conversion[] conversions) =>
+        ConversionsByType.TryGetValue(fullName, out conversions!);
+}
