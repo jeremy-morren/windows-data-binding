@@ -49,7 +49,12 @@ public class Person
 The generated source will look like this. Every type is fully qualified so the generated code cannot be
 broken by a name in your own project, the `[Description]` text is the doc comments of each property in the
 chain joined by `: `, and `[GeneratedCode]` carries the generator's full package version, prerelease suffix
-included, so a generated file always says which build wrote it:
+included, so a generated file always says which build wrote it.
+
+The generated file carries no XML documentation of its own. It used to give every property a `<summary>`
+holding the expression and a `<remarks>` naming each member in its chain, which came to four fifths of the
+file for no benefit a reader of generated code gets. Your own doc comments still reach the binder, through
+`[Description]`.
 
 ```csharp
 namespace Demo
@@ -69,78 +74,48 @@ namespace Demo
 #endif
         }
 
-        /// <summary><c>Name</c></summary>
-        /// <remarks><see cref="Demo.Person.Name"/></remarks>
         [global::System.ComponentModel.Description("Person name")]
         public string? Name => _source.Name;
 
-        /// <summary><c>Address</c></summary>
-        /// <remarks><see cref="Demo.Person.Address"/></remarks>
         [global::System.ComponentModel.Description("Person's address")]
         public global::Demo.Address? Address => _source.Address;
 
-        /// <summary><c>Address?.Street</c></summary>
-        /// <remarks><see cref="Demo.Person.Address"/> <see cref="Demo.Address.Street"/></remarks>
         [global::System.ComponentModel.Description("Person's address")]
         public string? Address_Street => _source.Address?.Street;
 
-        /// <summary><c>Address?.City</c></summary>
-        /// <remarks><see cref="Demo.Person.Address"/> <see cref="Demo.Address.City"/></remarks>
         [global::System.ComponentModel.Description("Person's address")]
         public string? Address_City => _source.Address?.City;
 
-        /// <summary><c>Address?.State</c></summary>
-        /// <remarks><see cref="Demo.Person.Address"/> <see cref="Demo.Address.State"/></remarks>
         [global::System.ComponentModel.Description("Person's address: Address state")]
         public string? Address_State => _source.Address?.State;
 
-        /// <summary><c>CreatedAt.ToDateTimeUtc()</c></summary>
-        /// <remarks><see cref="Demo.Person.CreatedAt"/></remarks>
         [global::System.ComponentModel.Description("The timestamp that the person was created at")]
         public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
 
-        /// <summary><c>CreatedAt.ToString(null, null)</c></summary>
-        /// <remarks><see cref="Demo.Person.CreatedAt"/></remarks>
         [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
         public string? CreatedAt_Formatted => _source.CreatedAt.ToString(null, null);
 
-        /// <summary><c>LastLogin</c></summary>
-        /// <remarks><see cref="Demo.Person.LastLogin"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone")]
         public global::Demo.LoginInfo? LastLogin => _source.LastLogin;
 
-        /// <summary><c>LastLogin?.Id</c></summary>
-        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Id"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone")]
         public int? LastLogin_Id => _source.LastLogin?.Id;
 
-        /// <summary><c>LastLogin?.Timestamp.ToDateTimeOffset()</c></summary>
-        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at")]
         public global::System.DateTimeOffset? LastLogin_Timestamp => _source.LastLogin?.Timestamp.ToDateTimeOffset();
 
-        /// <summary><c>LastLogin?.Timestamp.ToDateTimeUtc()</c></summary>
-        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Utc)")]
         public global::System.DateTime? LastLogin_Timestamp_Utc => _source.LastLogin?.Timestamp.ToDateTimeUtc();
 
-        /// <summary><c>LastLogin?.Timestamp.ToDateTimeUnspecified()</c></summary>
-        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Local)")]
         public global::System.DateTime? LastLogin_Timestamp_Local => _source.LastLogin?.Timestamp.ToDateTimeUnspecified();
 
-        /// <summary><c>LastLogin?.Timestamp.Offset.ToTimeSpan()</c></summary>
-        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Offset)")]
         public global::System.TimeSpan? LastLogin_Timestamp_Offset => _source.LastLogin?.Timestamp.Offset.ToTimeSpan();
 
-        /// <summary><c>LastLogin?.Timestamp.Zone.Id</c></summary>
-        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
         public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
 
-        /// <summary><c>LastLogin?.Timestamp.ToString(null, null)</c></summary>
-        /// <remarks><see cref="Demo.Person.LastLogin"/> <see cref="Demo.LoginInfo.Timestamp"/></remarks>
         [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
         public string? LastLogin_Timestamp_Formatted => _source.LastLogin?.Timestamp.ToString(null, null);
     }
@@ -230,6 +205,38 @@ saves the caller a null check either way. The annotations are only emitted when 
 actually resolve them, so neither becomes a dependency. A struct binder is declared `readonly`, so reading a
 member never takes a defensive copy.
 
+### Writing the constructor yourself
+
+Declare a constructor and the generated one steps aside — useful for validating the source, or for taking
+more than it:
+
+```csharp
+[GenerateWindowsBindingModel(typeof(Person))]
+public sealed partial class PersonModelBinder
+{
+    public PersonModelBinder(Person source, ILogger log)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        _source = source;
+        _log = log;
+    }
+}
+```
+
+The `private readonly TSource _source` field is generated either way — it is what every generated property
+reads through — so filling it becomes your constructor's job. **`WGD006` warns when a constructor never
+assigns it**, because the code compiles perfectly and then throws on the first property read:
+
+> This constructor of class 'PersonModelBinder' never assigns `_source`, so every generated property will
+> throw when it is read
+
+Each constructor is judged on its own, and one that chains with `: this(...)` is satisfied by the one it
+calls. A primary constructor always warns: it has no body to assign from, and the field is declared in the
+half of the type it cannot reach.
+
+`Create` is emitted only when some constructor takes exactly the source — it says `new PersonModelBinder(source)`,
+which has to bind to something. The constructor above takes a logger too, so that binder gets no factory.
+
 The binder also mirrors how the source compares:
 
 | Interface              | Always?                            | Delegates to |
@@ -262,8 +269,6 @@ public sealed partial class PersonModelBinder
 ```
 
 ```csharp
-/// <summary><c>Current?.Speed</c></summary>
-/// <remarks><see cref="Demo.PersonModelBinder.Current"/> <see cref="Demo.Vehicle.Speed"/></remarks>
 [global::System.ComponentModel.Description("The vehicle being driven")]
 public int? Current_Speed => this.Current?.Speed;
 
@@ -341,12 +346,6 @@ already compiled, generated half and all, so it is walked as any other object wo
 A property is either *simple* — bound directly, with the object never traversed — or an *object graph*, which
 is flattened. Value types, enums, collections, [mapped](#mapping-a-wrapper-onto-the-type-it-wraps)
 wrappers, `JsonNode` and `JsonElement` are all simple.
-
-The `<remarks>` cref names the type each member is declared on. A cref lives in an XML attribute, where an
-angle bracket is illegal, so a generic is written with braces around its type *parameters* —
-`<see cref="Demo.Base{T}.Current"/>`. The parameters rather than the arguments: a cref's type arguments have
-to be simple names, so the constructed `Base{Demo.Reading}` is rejected as malformed (CS1584) while `Base{T}`
-always binds.
 
 A source type may be generic as long as its type arguments are supplied — `typeof(Base<Reading>)` on the
 attribute, or a `sealed class Inherited : Base<Reading>` whose base carries the members. Substitution has

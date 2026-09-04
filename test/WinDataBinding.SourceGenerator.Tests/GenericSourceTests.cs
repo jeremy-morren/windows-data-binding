@@ -74,11 +74,13 @@ public class GenericSourceTests
         result.Source.Should().Contain("public string? Label => _source.Label;");
         result.Source.Should().Contain("""[global::System.ComponentModel.Description("The current one")]""");
 
+        /* XML doc comments removed.
         // A cref lives in an XML attribute, where an angle bracket is illegal, so the type arguments go in
         // braces. The member is declared on the constructed base, so that is what the cref names.
         result.Source.Should().Contain("""<see cref="Demo.Base{T}.Current"/>""");
         result.Source.Should().Contain("""<see cref="Demo.Inherited.Label"/>""");
         result.Source.Should().NotContain("cref=\"Demo.Base<");
+        */
     }
 
     [Fact]
@@ -99,7 +101,9 @@ public class GenericSourceTests
         result.Source.Should().Contain("public global::Demo.Reading? Current => _source.Current;");
         result.Source.Should().Contain("public int? Current_Depth => _source.Current?.Depth;");
         result.Source.Should().Contain("public int? History_Count => _source.History?.Count;");
+        /* XML doc comments removed.
         result.Source.Should().Contain("""<see cref="Demo.Base{T}.Current"/>""");
+        */
     }
 
     [Fact]

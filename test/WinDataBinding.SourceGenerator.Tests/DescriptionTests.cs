@@ -40,34 +40,23 @@ public class DescriptionTests
             #endif
                     }
 
-                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
                     [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
                     public static ModelBinder? Create(global::Demo.Model? source) =>
                         source is not null ? new ModelBinder(source) : null;
 
-                    /// <summary>Compares this binder to another for equality.</summary>
-                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
                     public bool Equals(ModelBinder? other) =>
                         other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
 
-                    /// <inheritdoc/>
                     public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
 
-                    /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary><c>Rendered</c></summary>
-                    /// <remarks><see cref="Demo.Model.Rendered"/></remarks>
                     [global::System.ComponentModel.Description("Rendered with ToString() for display")]
                     public string? Rendered => _source.Rendered;
 
-                    /// <summary><c>Raw</c></summary>
-                    /// <remarks><see cref="Demo.Model.Raw"/></remarks>
                     [global::System.ComponentModel.Description("See for the text form")]
                     public int Raw => _source.Raw;
 
-                    /// <summary><c>Wrapped</c></summary>
-                    /// <remarks><see cref="Demo.Model.Wrapped"/></remarks>
                     [global::System.ComponentModel.Description("Spread over several lines")]
                     public int Wrapped => _source.Wrapped;
                 }

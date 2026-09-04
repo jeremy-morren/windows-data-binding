@@ -35,28 +35,19 @@ public class DiagnosticTests
             #endif
                     }
 
-                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
                     [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
                     public static ModelBinder? Create(global::Demo.Model? source) =>
                         source is not null ? new ModelBinder(source) : null;
 
-                    /// <summary>Compares this binder to another for equality.</summary>
-                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
                     public bool Equals(ModelBinder? other) =>
                         other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
 
-                    /// <inheritdoc/>
                     public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
 
-                    /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary><c>Node</c></summary>
-                    /// <remarks><see cref="Demo.Model.Node"/></remarks>
                     public global::Demo.Node? Node => _source.Node;
 
-                    /// <summary><c>Node?.Value</c></summary>
-                    /// <remarks><see cref="Demo.Model.Node"/> <see cref="Demo.Node.Value"/></remarks>
                     public int? Node_Value => _source.Node?.Value;
                 }
             }

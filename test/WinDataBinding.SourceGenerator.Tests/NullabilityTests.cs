@@ -38,40 +38,25 @@ public class NullabilityTests
             #endif
                     }
 
-                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
                     [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
                     public static ModelBinder? Create(global::Demo.Model? source) =>
                         source is not null ? new ModelBinder(source) : null;
 
-                    /// <summary>Compares this binder to another for equality.</summary>
-                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
                     public bool Equals(ModelBinder? other) =>
                         other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
 
-                    /// <inheritdoc/>
                     public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
 
-                    /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary><c>Line</c></summary>
-                    /// <remarks><see cref="Demo.Model.Line"/></remarks>
                     public global::Demo.Line Line => _source.Line;
 
-                    /// <summary><c>Line.Price</c></summary>
-                    /// <remarks><see cref="Demo.Model.Line"/> <see cref="Demo.Line.Price"/></remarks>
                     public global::Demo.Money Line_Price => _source.Line.Price;
 
-                    /// <summary><c>Line.Price.Amount</c></summary>
-                    /// <remarks><see cref="Demo.Model.Line"/> <see cref="Demo.Line.Price"/> <see cref="Demo.Money.Amount"/></remarks>
                     public decimal Line_Price_Amount => _source.Line.Price.Amount;
 
-                    /// <summary><c>Maybe</c></summary>
-                    /// <remarks><see cref="Demo.Model.Maybe"/></remarks>
                     public global::Demo.Money? Maybe => _source.Maybe;
 
-                    /// <summary><c>Maybe?.Amount</c></summary>
-                    /// <remarks><see cref="Demo.Model.Maybe"/> <see cref="Demo.Money.Amount"/></remarks>
                     public decimal? Maybe_Amount => _source.Maybe?.Amount;
                 }
             }

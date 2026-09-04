@@ -45,51 +45,32 @@ public class FormattedTests
             #endif
                     }
 
-                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
                     [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
                     public static ModelBinder? Create(global::Demo.Model? source) =>
                         source is not null ? new ModelBinder(source) : null;
 
-                    /// <summary>Compares this binder to another for equality.</summary>
-                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
                     public bool Equals(ModelBinder? other) =>
                         other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
 
-                    /// <inheritdoc/>
                     public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
 
-                    /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary><c>Outside</c></summary>
-                    /// <remarks><see cref="Demo.Model.Outside"/></remarks>
                     [global::System.ComponentModel.Description("Outside air")]
                     public global::Demo.Temperature Outside => _source.Outside;
 
-                    /// <summary><c>Outside.Degrees</c></summary>
-                    /// <remarks><see cref="Demo.Model.Outside"/> <see cref="Demo.Temperature.Degrees"/></remarks>
                     [global::System.ComponentModel.Description("Outside air")]
                     public double Outside_Degrees => _source.Outside.Degrees;
 
-                    /// <summary><c>Outside.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.Outside"/></remarks>
                     [global::System.ComponentModel.Description("Outside air (Formatted)")]
                     public string? Outside_Formatted => _source.Outside.ToString(null, null);
 
-                    /// <summary><c>Inner</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/></remarks>
                     public global::Demo.Inner? Inner => _source.Inner;
 
-                    /// <summary><c>Inner?.Reading</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/></remarks>
                     public global::Demo.Temperature? Inner_Reading => _source.Inner?.Reading;
 
-                    /// <summary><c>Inner?.Reading.Degrees</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/> <see cref="Demo.Temperature.Degrees"/></remarks>
                     public double? Inner_Reading_Degrees => _source.Inner?.Reading.Degrees;
 
-                    /// <summary><c>Inner?.Reading.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Reading"/></remarks>
                     public string? Inner_Reading_Formatted => _source.Inner?.Reading.ToString(null, null);
                 }
             }

@@ -66,6 +66,22 @@ internal static class Parser
             ? ImmutableArray<GeneratedProperty>.Empty
             : Collect(binder, sourceType, known, options, diagnostics, location, ct).Properties;
 
+        // A constructor of their own replaces ours entirely. The field is still generated, so it is on
+        // that constructor to fill it, and a warning says so when it does not.
+        var written = binder.InstanceConstructors.Where(c => !c.IsImplicitlyDeclared).ToArray();
+
+        foreach (var constructor in written)
+            if (!AssignsSource(constructor))
+                diagnostics.Add(DiagnosticInfo.Create(
+                    Diagnostics.ConstructorMustSetSource,
+                    LocationInfo.From(constructor.Locations.FirstOrDefault() ?? Location.None),
+                    declaration.Keyword.ValueText, binder.Name));
+
+        // The factory says 'new Binder(source)', which needs a constructor shaped that way to exist.
+        var takesSource = written.Any(c =>
+            c.Parameters.Length == 1 &&
+            SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, sourceType));
+
         var ns = binder.ContainingNamespace.IsGlobalNamespace
             ? null
             : binder.ContainingNamespace.ToDisplayString(Formats.Cref);
@@ -79,12 +95,51 @@ internal static class Parser
             sourceType.IsReferenceType,
             KnownTypeSymbols.IsComparable(sourceType),
             Accessibility(sourceType.DeclaredAccessibility),
+            written.Length == 0,
+            written.Length == 0 || takesSource,
             HintName(ns, containingTypes, binder.Name),
             known.HasContractAnnotation,
             known.HasNotNullIfNotNull,
             new EquatableArray<GeneratedProperty>(properties),
             EquatableArray.Create(diagnostics));
     }
+
+    /// <summary>The field every generated property reads through.</summary>
+    private const string SourceField = "_source";
+
+    /// <summary>
+    /// Whether a hand-written constructor fills the source field.
+    /// This is a question about syntax rather than symbols: the field is declared in the half of the type
+    /// this generator has yet to write, so at the moment the constructor is read there is nothing for the
+    /// name to bind to.
+    /// </summary>
+    private static bool AssignsSource(IMethodSymbol constructor)
+    {
+        foreach (var reference in constructor.DeclaringSyntaxReferences)
+        {
+            if (reference.GetSyntax() is not ConstructorDeclarationSyntax syntax) continue;
+
+            // ': this(...)' hands the work to another constructor, which answers for itself.
+            if (syntax.Initializer.IsKind(SyntaxKind.ThisConstructorInitializer)) return true;
+
+            var body = (SyntaxNode?)syntax.Body ?? syntax.ExpressionBody;
+            if (body is null) continue;
+
+            foreach (var assignment in body.DescendantNodes().OfType<AssignmentExpressionSyntax>())
+                if (IsSourceField(assignment.Left))
+                    return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsSourceField(ExpressionSyntax expression) => expression switch
+    {
+        IdentifierNameSyntax name => name.Identifier.ValueText == SourceField,
+        MemberAccessExpressionSyntax { Expression: ThisExpressionSyntax } member =>
+            member.Name.Identifier.ValueText == SourceField,
+        _ => false,
+    };
 
     // -- traversal ------------------------------------------------------------------------------
 

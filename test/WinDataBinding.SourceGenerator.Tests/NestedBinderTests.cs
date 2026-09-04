@@ -199,7 +199,9 @@ public class NestedBinderTests
 
         result.Source.Should().Contain(
             """[global::System.ComponentModel.Description("Where they live: Street name")]""");
+        /* XML doc comments removed.
         result.Source.Should().Contain("""<see cref="Demo.Person.Home"/> <see cref="Demo.Address.Street"/>""");
+        */
     }
 
     [Fact]

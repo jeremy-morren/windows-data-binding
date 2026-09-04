@@ -53,6 +53,12 @@ internal static class Diagnostics
         "The type '{0}' is an open generic; [GenerateWindowsBindingModel] needs a binding model type that is not generic, and a source type with its type arguments supplied",
         Category, DiagnosticSeverity.Error, isEnabledByDefault: true);
 
+    public static readonly DiagnosticDescriptor ConstructorMustSetSource = new(
+        "WGD006",
+        "A hand-written constructor must set the source field",
+        "This constructor of {0} '{1}' never assigns '_source', so every generated property will throw when it is read",
+        Category, DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
     public static readonly DiagnosticDescriptor ContainingTypeNotPartial = new(
         "WGD004",
         "Containing type must be partial",

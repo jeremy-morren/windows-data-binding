@@ -42,172 +42,91 @@ public class NodaTimeTests
             #endif
                     }
 
-                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
                     [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
                     public static ModelBinder? Create(global::Demo.Model? source) =>
                         source is not null ? new ModelBinder(source) : null;
 
-                    /// <summary>Compares this binder to another for equality.</summary>
-                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
                     public bool Equals(ModelBinder? other) =>
                         other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
 
-                    /// <inheritdoc/>
                     public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
 
-                    /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary><c>Instant.ToDateTimeUtc()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Instant"/></remarks>
                     public global::System.DateTime Instant => _source.Instant.ToDateTimeUtc();
 
-                    /// <summary><c>Instant.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.Instant"/></remarks>
                     public string? Instant_Formatted => _source.Instant.ToString(null, null);
 
-                    /// <summary><c>Zone?.Id</c></summary>
-                    /// <remarks><see cref="Demo.Model.Zone"/></remarks>
                     public string? Zone => _source.Zone?.Id;
 
-                    /// <summary><c>OffsetDateTime.ToDateTimeOffset()</c></summary>
-                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
                     public global::System.DateTimeOffset OffsetDateTime => _source.OffsetDateTime.ToDateTimeOffset();
 
-                    /// <summary><c>OffsetDateTime.ToInstant().ToDateTimeUtc()</c></summary>
-                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
                     public global::System.DateTime OffsetDateTime_Utc => _source.OffsetDateTime.ToInstant().ToDateTimeUtc();
 
-                    /// <summary><c>OffsetDateTime.LocalDateTime.ToDateTimeUnspecified()</c></summary>
-                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
                     public global::System.DateTime OffsetDateTime_Local => _source.OffsetDateTime.LocalDateTime.ToDateTimeUnspecified();
 
-                    /// <summary><c>OffsetDateTime.Offset.ToTimeSpan()</c></summary>
-                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
                     public global::System.TimeSpan OffsetDateTime_Offset => _source.OffsetDateTime.Offset.ToTimeSpan();
 
-                    /// <summary><c>OffsetDateTime.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.OffsetDateTime"/></remarks>
                     public string? OffsetDateTime_Formatted => _source.OffsetDateTime.ToString(null, null);
 
-                    /// <summary><c>Zoned.ToDateTimeOffset()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
                     public global::System.DateTimeOffset Zoned => _source.Zoned.ToDateTimeOffset();
 
-                    /// <summary><c>Zoned.ToDateTimeUtc()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
                     public global::System.DateTime Zoned_Utc => _source.Zoned.ToDateTimeUtc();
 
-                    /// <summary><c>Zoned.ToDateTimeUnspecified()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
                     public global::System.DateTime Zoned_Local => _source.Zoned.ToDateTimeUnspecified();
 
-                    /// <summary><c>Zoned.Offset.ToTimeSpan()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
                     public global::System.TimeSpan Zoned_Offset => _source.Zoned.Offset.ToTimeSpan();
 
-                    /// <summary><c>Zoned.Zone.Id</c></summary>
-                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
                     public string? Zoned_Timezone => _source.Zoned.Zone.Id;
 
-                    /// <summary><c>Zoned.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.Zoned"/></remarks>
                     public string? Zoned_Formatted => _source.Zoned.ToString(null, null);
 
-                    /// <summary><c>LocalDateTime.ToDateTimeUnspecified()</c></summary>
-                    /// <remarks><see cref="Demo.Model.LocalDateTime"/></remarks>
                     public global::System.DateTime LocalDateTime => _source.LocalDateTime.ToDateTimeUnspecified();
 
-                    /// <summary><c>LocalDateTime.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.LocalDateTime"/></remarks>
                     public string? LocalDateTime_Formatted => _source.LocalDateTime.ToString(null, null);
 
-            #if NET6_0_OR_GREATER
-                    /// <summary><c>LocalDate.ToDateOnly()</c></summary>
-            #else
-                    /// <summary><c>LocalDate.ToDateTimeUnspecified()</c></summary>
-            #endif
-                    /// <remarks><see cref="Demo.Model.LocalDate"/></remarks>
             #if NET6_0_OR_GREATER
                     public global::System.DateOnly LocalDate => _source.LocalDate.ToDateOnly();
             #else
                     public global::System.DateTime LocalDate => _source.LocalDate.ToDateTimeUnspecified();
             #endif
 
-                    /// <summary><c>LocalDate.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.LocalDate"/></remarks>
                     public string? LocalDate_Formatted => _source.LocalDate.ToString(null, null);
 
-            #if NET6_0_OR_GREATER
-                    /// <summary><c>LocalTime.ToTimeOnly()</c></summary>
-            #else
-                    /// <summary><c>global::System.TimeSpan.FromTicks(LocalTime.TickOfDay)</c></summary>
-            #endif
-                    /// <remarks><see cref="Demo.Model.LocalTime"/></remarks>
             #if NET6_0_OR_GREATER
                     public global::System.TimeOnly LocalTime => _source.LocalTime.ToTimeOnly();
             #else
                     public global::System.TimeSpan LocalTime => global::System.TimeSpan.FromTicks(_source.LocalTime.TickOfDay);
             #endif
 
-                    /// <summary><c>LocalTime.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.LocalTime"/></remarks>
                     public string? LocalTime_Formatted => _source.LocalTime.ToString(null, null);
 
-                    /// <summary><c>Duration.ToTimeSpan()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Duration"/></remarks>
                     public global::System.TimeSpan Duration => _source.Duration.ToTimeSpan();
 
-                    /// <summary><c>Duration.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.Duration"/></remarks>
                     public string? Duration_Formatted => _source.Duration.ToString(null, null);
 
-                    /// <summary><c>Offset.ToTimeSpan()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Offset"/></remarks>
                     public global::System.TimeSpan Offset => _source.Offset.ToTimeSpan();
 
-                    /// <summary><c>Offset.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.Offset"/></remarks>
                     public string? Offset_Formatted => _source.Offset.ToString(null, null);
 
-            #if NET6_0_OR_GREATER
-                    /// <summary><c>YearMonth.OnDayOfMonth(1).ToDateOnly()</c></summary>
-            #else
-                    /// <summary><c>YearMonth.OnDayOfMonth(1).ToDateTimeUnspecified()</c></summary>
-            #endif
-                    /// <remarks><see cref="Demo.Model.YearMonth"/></remarks>
             #if NET6_0_OR_GREATER
                     public global::System.DateOnly YearMonth => _source.YearMonth.OnDayOfMonth(1).ToDateOnly();
             #else
                     public global::System.DateTime YearMonth => _source.YearMonth.OnDayOfMonth(1).ToDateTimeUnspecified();
             #endif
 
-                    /// <summary><c>YearMonth.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.YearMonth"/></remarks>
                     public string? YearMonth_Formatted => _source.YearMonth.ToString(null, null);
 
-                    /// <summary><c>Interval.HasStart ? Interval.Start.ToDateTimeUtc() : null</c></summary>
-                    /// <remarks><see cref="Demo.Model.Interval"/></remarks>
                     public global::System.DateTime? Interval_Start => _source.Interval.HasStart ? _source.Interval.Start.ToDateTimeUtc() : null;
 
-                    /// <summary><c>Interval.HasEnd ? Interval.End.ToDateTimeUtc() : null</c></summary>
-                    /// <remarks><see cref="Demo.Model.Interval"/></remarks>
                     public global::System.DateTime? Interval_End => _source.Interval.HasEnd ? _source.Interval.End.ToDateTimeUtc() : null;
 
-                    /// <summary><c>Interval.HasStart &amp;&amp; Interval.HasEnd ? Interval.Duration.ToTimeSpan() : null</c></summary>
-                    /// <remarks><see cref="Demo.Model.Interval"/></remarks>
                     public global::System.TimeSpan? Interval_Duration => _source.Interval.HasStart && _source.Interval.HasEnd ? _source.Interval.Duration.ToTimeSpan() : null;
 
-                    /// <summary><c>Period?.ToString()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Period"/></remarks>
                     public string? Period => _source.Period?.ToString();
 
-                    /// <summary><c>TimeZone?.Id</c></summary>
-                    /// <remarks><see cref="Demo.Model.TimeZone"/></remarks>
                     public string? TimeZone_Id => _source.TimeZone?.Id;
 
-                    /// <summary><c>TimeZone?.DisplayName</c></summary>
-                    /// <remarks><see cref="Demo.Model.TimeZone"/></remarks>
                     public string? TimeZone_DisplayName => _source.TimeZone?.DisplayName;
                 }
             }
@@ -255,52 +174,31 @@ public class NodaTimeTests
             #endif
                     }
 
-                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
                     [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
                     public static ModelBinder? Create(global::Demo.Model? source) =>
                         source is not null ? new ModelBinder(source) : null;
 
-                    /// <summary>Compares this binder to another for equality.</summary>
-                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
                     public bool Equals(ModelBinder? other) =>
                         other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
 
-                    /// <inheritdoc/>
                     public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
 
-                    /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary><c>Inner</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/></remarks>
                     public global::Demo.Inner? Inner => _source.Inner;
 
-                    /// <summary><c>Inner?.Interval.HasStart == true ? Inner.Interval.Start.ToDateTimeUtc() : null</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Interval"/></remarks>
                     public global::System.DateTime? Inner_Interval_Start => _source.Inner?.Interval.HasStart == true ? _source.Inner.Interval.Start.ToDateTimeUtc() : null;
 
-                    /// <summary><c>Inner?.Interval.HasEnd == true ? Inner.Interval.End.ToDateTimeUtc() : null</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Interval"/></remarks>
                     public global::System.DateTime? Inner_Interval_End => _source.Inner?.Interval.HasEnd == true ? _source.Inner.Interval.End.ToDateTimeUtc() : null;
 
-                    /// <summary><c>Inner?.Interval.HasStart == true &amp;&amp; Inner.Interval.HasEnd ? Inner.Interval.Duration.ToTimeSpan() : null</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Interval"/></remarks>
                     public global::System.TimeSpan? Inner_Interval_Duration => _source.Inner?.Interval.HasStart == true && _source.Inner.Interval.HasEnd ? _source.Inner.Interval.Duration.ToTimeSpan() : null;
 
-            #if NET6_0_OR_GREATER
-                    /// <summary><c>Inner?.Time.ToTimeOnly()</c></summary>
-            #else
-                    /// <summary><c>Inner?.Time.TickOfDay is { } ticks ? global::System.TimeSpan.FromTicks(ticks) : null</c></summary>
-            #endif
-                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Time"/></remarks>
             #if NET6_0_OR_GREATER
                     public global::System.TimeOnly? Inner_Time => _source.Inner?.Time.ToTimeOnly();
             #else
                     public global::System.TimeSpan? Inner_Time => _source.Inner?.Time.TickOfDay is { } ticks ? global::System.TimeSpan.FromTicks(ticks) : null;
             #endif
 
-                    /// <summary><c>Inner?.Time.ToString(null, null)</c></summary>
-                    /// <remarks><see cref="Demo.Model.Inner"/> <see cref="Demo.Inner.Time"/></remarks>
                     public string? Inner_Time_Formatted => _source.Inner?.Time.ToString(null, null);
                 }
             }

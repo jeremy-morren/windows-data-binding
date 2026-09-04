@@ -38,33 +38,22 @@ public class JsonTests
             #endif
                     }
 
-                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
                     [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
                     public static ModelBinder? Create(global::Demo.Model? source) =>
                         source is not null ? new ModelBinder(source) : null;
 
-                    /// <summary>Compares this binder to another for equality.</summary>
-                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
                     public bool Equals(ModelBinder? other) =>
                         other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
 
-                    /// <inheritdoc/>
                     public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
 
-                    /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary><c>Element.GetRawText()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Element"/></remarks>
                     [global::System.ComponentModel.Description("Raw payload (Formatted)")]
                     public string? Element_Formatted => _source.Element.GetRawText();
 
-                    /// <summary><c>Node?.ToJsonString()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Node"/></remarks>
                     public string? Node_Formatted => _source.Node?.ToJsonString();
 
-                    /// <summary><c>Object?.ToJsonString()</c></summary>
-                    /// <remarks><see cref="Demo.Model.Object"/></remarks>
                     public string? Object_Formatted => _source.Object?.ToJsonString();
                 }
             }

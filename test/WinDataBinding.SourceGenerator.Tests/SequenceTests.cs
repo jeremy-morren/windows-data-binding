@@ -33,39 +33,26 @@ public class SequenceTests
             #endif
                     }
 
-                    /// <summary>Wraps <paramref name="source"/>, or returns null when it is null.</summary>
                     [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
                     public static ModelBinder? Create(global::Demo.Model? source) =>
                         source is not null ? new ModelBinder(source) : null;
 
-                    /// <summary>Compares this binder to another for equality.</summary>
-                    /// <remarks>Two binders are equal when the sources they wrap are.</remarks>
                     public bool Equals(ModelBinder? other) =>
                         other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
 
-                    /// <inheritdoc/>
                     public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
 
-                    /// <inheritdoc/>
                     public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
 
-                    /// <summary><c>Totals</c></summary>
-                    /// <remarks><see cref="Demo.Model.Totals"/></remarks>
                     [global::System.ComponentModel.Description("Line totals")]
                     public global::System.Collections.Generic.List<decimal>? Totals => _source.Totals;
 
-                    /// <summary><c>Totals?.Count</c></summary>
-                    /// <remarks><see cref="Demo.Model.Totals"/></remarks>
                     [global::System.ComponentModel.Description("Line totals (Count)")]
                     public int? Totals_Count => _source.Totals?.Count;
 
-                    /// <summary><c>Totals is { } items ? global::System.String.Join(", ", global::System.Linq.Enumerable.Select(items, item =&gt; item.ToString(null, null))) : null</c></summary>
-                    /// <remarks><see cref="Demo.Model.Totals"/></remarks>
                     [global::System.ComponentModel.Description("Line totals (Display)")]
                     public string? Totals_Display => _source.Totals is { } items ? global::System.String.Join(", ", global::System.Linq.Enumerable.Select(items, item => item.ToString(null, null))) : null;
 
-                    /// <summary><c>Totals_Display is { } display ? $"[{display}]" : null</c></summary>
-                    /// <remarks><see cref="Demo.Model.Totals"/></remarks>
                     [global::System.ComponentModel.Description("Line totals (Array)")]
                     public string? Totals_Array => Totals_Display is { } display ? $"[{display}]" : null;
                 }

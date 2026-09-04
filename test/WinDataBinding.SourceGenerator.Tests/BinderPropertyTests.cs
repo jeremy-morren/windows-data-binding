@@ -187,8 +187,10 @@ public class BinderPropertyTests
         result.Source.Should().Contain(
             """[global::System.ComponentModel.Description("The engine: Revolutions")]""");
 
+        /* XML doc comments removed.
         // The remark points at the binder's own property, which is where the chain starts.
         result.Source.Should().Contain("""<see cref="Demo.ModelBinder.Motor"/>""");
+        */
     }
 
     [Fact]

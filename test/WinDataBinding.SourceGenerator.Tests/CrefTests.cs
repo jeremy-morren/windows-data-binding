@@ -1,3 +1,6 @@
+/* XML doc comments removed. Nothing emits a cref any more, so every one of these passes vacuously.
+   Restore alongside the doc comments in Emitter if they come back.
+
 using System.Collections.Immutable;
 using Basic.Reference.Assemblies;
 using Microsoft.CodeAnalysis;
@@ -126,3 +129,4 @@ public class CrefTests
         ];
     }
 }
+*/

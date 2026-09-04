@@ -37,6 +37,8 @@ internal sealed record BinderModel(
     bool SourceIsReference,
     bool SourceIsComparable,
     string CtorAccessibility,
+    bool EmitConstructor,
+    bool EmitFactory,
     string HintName,
     bool ContractAnnotation,
     bool NotNullIfNotNull,
