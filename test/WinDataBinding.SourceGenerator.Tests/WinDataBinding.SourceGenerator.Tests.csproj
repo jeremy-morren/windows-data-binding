@@ -11,15 +11,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentAssertions" Version="7.2.0" />
+    <PackageReference Include="FluentAssertions" Version="8.10.0" />
     <PackageReference Include="xunit.v3" Version="4.0.0" />
     <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.0" />
 
     <!-- The TRX report is an extension, not part of the platform; CI publishes test results from it. -->
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
-    <PackageReference Include="Basic.Reference.Assemblies.Net80" Version="1.7.9" />
-    <PackageReference Include="Basic.Reference.Assemblies.NetStandard20" Version="1.7.9" />
+    <PackageReference Include="Basic.Reference.Assemblies.Net80" Version="1.8.11" />
+    <PackageReference Include="Basic.Reference.Assemblies.NetStandard20" Version="1.8.11" />
     <PackageReference Include="NodaTime" Version="3.2.2" GeneratePathProperty="true" />
   </ItemGroup>
 
