@@ -22,6 +22,7 @@ internal static class KnownTypes
         "System.UInt16", "System.UInt32", "System.UInt64", "System.UInt128",
         "System.Uri", "System.Guid", "System.Version",
         "System.Type", "System.Globalization.CultureInfo",
+        "System.Numerics.BigInteger", "System.Text.Rune", "System.Index",
         "System.DateTime", "System.DateTimeOffset", "System.TimeSpan",
         "System.DateOnly", "System.TimeOnly",
     };
@@ -55,6 +56,32 @@ internal static class KnownTypes
             Self(null, "global::System.Net.IPNetwork"),
             Into("BaseAddress", "System.Net.IPAddress", "BaseAddress", isReference: true),
             Tail("PrefixLength", "int", "PrefixLength"),
+        ],
+
+        // Walking an exception reaches TargetSite, a whole reflection graph, and Data, a dictionary.
+        // What is worth having is the message, where it came from, and ToString() for the whole story:
+        // type, message, stack trace and every inner exception at once.
+        ["System.Exception"] =
+        [
+            Self(null, "global::System.Exception", isReference: true),
+            Tail("Message", "string", "Message", isReference: true),
+            Tail("StackTrace", "string", "StackTrace", isReference: true),
+            Tail("Display", "string", "ToString()", isReference: true),
+        ],
+
+        // A row adds to the rows of the type's bases, so each of these carries the four above as well.
+        ["System.ArgumentException"] =
+        [
+            Tail("ParamName", "string", "ParamName", isReference: true),
+        ],
+        ["System.ArgumentOutOfRangeException"] =
+        [
+            Tail("ActualValue", "object", "ActualValue", isReference: true),
+        ],
+        ["System.Net.Http.HttpRequestException"] =
+        [
+            // StatusCode arrived in NET5. Before that the member is simply not there to read.
+            Optional("StatusCode", "global::System.Net.HttpStatusCode", "StatusCode", "StatusCode"),
         ],
 
         // NodaTime

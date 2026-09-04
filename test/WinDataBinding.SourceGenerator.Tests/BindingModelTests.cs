@@ -672,4 +672,81 @@ public class BindingModelTests
         result.Source.Should().Contain(
             "public global::System.Globalization.CultureInfo? Culture => _source.Culture;");
     }
+
+    [Fact]
+    public void Reaches_a_member_declared_more_than_once_in_the_hierarchy_only_once()
+    {
+        // An override is declared on the derived type and again on the base, and the walk goes up the chain.
+        var source = TestSources.Wrap("""
+            public abstract class Base
+            {
+                public virtual int Shared => 0;
+                public virtual string Hidden => null;
+            }
+
+            public class Derived : Base
+            {
+                public override int Shared => 1;
+                public new int Hidden => 2;
+            }
+
+            public class Model { public Derived Value { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain("public int? Value_Shared => _source.Value?.Shared;");
+        result.Source.Should().NotContain("Value__Shared");
+
+        // 'new' hides rather than overrides, and the derived declaration is the one reachable by name.
+        result.Source.Should().Contain("public int? Value_Hidden => _source.Value?.Hidden;");
+        result.Source.Should().NotContain("Value__Hidden");
+    }
+
+    [Fact]
+    public void Leaves_out_a_member_whose_type_cannot_be_a_property()
+    {
+        // ReadOnlyMemory<T>.Span is a ref struct: it cannot be boxed, and a lifted chain would ask for
+        // ReadOnlySpan<char>?, which does not compile at all.
+        var source = TestSources.Wrap("""
+            public class Inner { public System.ReadOnlyMemory<char> Text { get; set; } }
+
+            public class Model { public Inner Inner { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Source.Should().Contain("public int? Inner_Text_Length => _source.Inner?.Text.Length;");
+        result.Source.Should().NotContain("Span");
+    }
+
+    [Fact]
+    public void Binds_a_number_like_type_without_flattening_its_predicates()
+    {
+        var source = TestSources.Wrap("""
+            public class Model
+            {
+                public System.Numerics.BigInteger Big { get; set; }
+                public System.Text.Rune Rune { get; set; }
+                public System.Range Range { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        result.Source.Should().Contain("public global::System.Numerics.BigInteger Big => _source.Big;");
+        result.Source.Should().Contain("public global::System.Text.Rune Rune => _source.Rune;");
+
+        // IsEven, IsOne, IsPowerOfTwo, IsZero, Sign, Utf8SequenceLength and the rest are noise around a
+        // value that already renders itself.
+        result.Source.Should().NotContain("Big_");
+        result.Source.Should().NotContain("Rune_");
+
+        // Range keeps its two ends, each an Index that binds as it stands.
+        result.Source.Should().Contain("public global::System.Index Range_Start => _source.Range.Start;");
+        result.Source.Should().Contain("public global::System.Index Range_End => _source.Range.End;");
+        result.Source.Should().NotContain("Range_Start_");
+    }
 }

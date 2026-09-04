@@ -27,6 +27,13 @@ internal sealed class Conversion
     /// <summary>Guarded conversions always yield <c>T?</c>, even from a non-nullable chain.</summary>
     public bool ForceNullable { get; init; }
 
+    /// <summary>
+    /// Member the conversion reads, when the framework the consuming code targets may not have it.
+    /// A conversion naming a member that compilation cannot see is dropped rather than emitted as
+    /// something that will not build.
+    /// </summary>
+    public string? Requires { get; init; }
+
     /// <summary>Set when the conversion differs pre-NET6; both branches are then emitted under <c>#if</c>.</summary>
     public string? TypePre6 { get; init; }
 

@@ -33,6 +33,17 @@ internal static class Conversions
         Build = context => $"(({target}){context.Safe}){context.Accessor}{tail}",
     };
 
+    /// <summary>A tail whose member arrived in a later framework than the code may be compiled against.</summary>
+    public static Conversion Optional(string suffix, string type, string tail, string requires, bool isReference = false) =>
+        new()
+        {
+            Suffix = suffix,
+            Type = type,
+            IsReference = isReference,
+            Requires = requires,
+            Build = context => context.Safe + context.Accessor + tail,
+        };
+
     /// <summary>A tail landing on another type the table knows, which is flattened in its place.</summary>
     public static Conversion Into(string suffix, string yields, string tail, bool isReference = false) => new()
     {

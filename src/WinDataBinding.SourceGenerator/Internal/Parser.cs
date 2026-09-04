@@ -277,7 +277,7 @@ internal static class Parser
                 continue;
             }
 
-            if (KnownTypes.TryGetConversions(name, out var conversions))
+            if (known.TryGetConversions(underlying, out var conversions))
             {
                 // A conversion with no suffix of its own would take the bare name, which is spoken for here.
                 AddConversions(next, conversions, tail, ImmutableHashSet<string>.Empty, candidates);
@@ -431,6 +431,11 @@ internal static class Parser
     /// </summary>
     private static IEnumerable<(ISymbol Member, ITypeSymbol Type)> GetMembers(INamedTypeSymbol type)
     {
+        // A name can be reached only once from outside: an override or a 'new' member hides what it replaces,
+        // and the base declaration comes round again on the way up. Binding both would emit one expression
+        // twice, the second widened away from the first.
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+
         for (var current = type;
              current is not null && current.SpecialType != SpecialType.System_Object;
              current = current.BaseType)
@@ -440,16 +445,22 @@ internal static class Parser
                 if (member.IsStatic || member.IsImplicitlyDeclared || member.DeclaredAccessibility != Access.Public)
                     continue;
 
-                switch (member)
+                var memberType = member switch
                 {
-                    case IPropertySymbol { GetMethod: { } getter, Parameters.IsEmpty: true } property
-                        when getter.DeclaredAccessibility == Access.Public:
-                        yield return (property, property.Type);
-                        break;
-                    case IFieldSymbol { AssociatedSymbol: null } field:
-                        yield return (field, field.Type);
-                        break;
-                }
+                    IPropertySymbol { GetMethod.DeclaredAccessibility: Access.Public, Parameters.IsEmpty: true }
+                        property => property.Type,
+                    IFieldSymbol { AssociatedSymbol: null } field => field.Type,
+                    _ => null,
+                };
+
+                if (memberType is null || !seen.Add(member.Name)) continue;
+
+                // A ref struct cannot be a property of a binder at all: it may not be boxed, and a lifted
+                // chain would ask for it nullable, which the language forbids outright. Span<T> reached
+                // through ReadOnlyMemory<T> is the one that turns up in practice.
+                if (memberType.IsRefLikeType) continue;
+
+                yield return (member, memberType);
             }
         }
     }

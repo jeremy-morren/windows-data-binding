@@ -28,6 +28,8 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
 
     private readonly Dictionary<ISymbol, FlattenedBinder> _flattened = new(SymbolEqualityComparer.Default);
 
+    private readonly Dictionary<ISymbol, Conversion[]?> _conversions = new(SymbolEqualityComparer.Default);
+
     public Compilation Compilation => compilation;
 
     private INamedTypeSymbol? Formattable => Resolve("System.IFormattable");
@@ -109,6 +111,54 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
         }
 
         return (null, null);
+    }
+
+    /// <summary>
+    /// The table entries for the type and for every base type that has one, the base's first.
+    /// A property is usually declared as a derived type — a specific exception, a concrete
+    /// <c>DateTimeZone</c> — so a row describes everything beneath it as well as the type it names,
+    /// and a row for a derived type adds to the row for its base rather than replacing it.
+    /// </summary>
+    public bool TryGetConversions(ITypeSymbol type, out Conversion[] conversions)
+    {
+        if (!_conversions.TryGetValue(type, out var cached))
+        {
+            cached = ComputeConversions(type);
+            _conversions[type] = cached;
+        }
+
+        conversions = cached!;
+        return cached is not null;
+    }
+
+    private static Conversion[]? ComputeConversions(ITypeSymbol type)
+    {
+        List<Conversion>? found = null;
+
+        for (var current = type; current is not null; current = current.BaseType)
+        {
+            if (!KnownTypes.TryGetConversions(current.ToDisplayString(Formats.Match), out var conversions))
+                continue;
+
+            var usable = conversions.Where(c => c.Requires is null || Declares(type, c.Requires)).ToArray();
+            if (usable.Length == 0) continue;
+
+            // Walking up, so each row goes in front of the ones already found, keeping its own order.
+            (found ??= []).InsertRange(0, usable);
+        }
+
+        return found?.ToArray();
+    }
+
+    /// <summary>Whether the type offers <paramref name="name"/> as a public instance member of any kind.</summary>
+    private static bool Declares(ITypeSymbol type, string name)
+    {
+        for (var current = type; current is not null; current = current.BaseType)
+            foreach (var member in current.GetMembers(name))
+                if (member is { IsStatic: false, DeclaredAccessibility: Accessibility.Public })
+                    return true;
+
+        return false;
     }
 
     /// <summary>Whether the type is a sequence, which is bound as-is rather than traversed.</summary>
@@ -235,7 +285,7 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
         type.OriginalDefinition.SpecialType == SpecialType.System_Collections_Generic_IReadOnlyCollection_T;
 
     /// <summary>Whether the type offers <paramref name="name"/> as a public instance <c>int</c> property.</summary>
-    private static bool Reads(ITypeSymbol type, string name) => Offers(type, candidate => Declares(candidate, name));
+    private static bool Reads(ITypeSymbol type, string name) => Offers(type, candidate => DeclaresInt(candidate, name));
 
     /// <summary>
     /// Whether the member is there to be named, rather than only satisfying an interface. An explicit
@@ -292,7 +342,7 @@ internal sealed class KnownTypeSymbols(Compilation compilation)
         return found;
     }
 
-    private static bool Declares(ITypeSymbol type, string name)
+    private static bool DeclaresInt(ITypeSymbol type, string name)
     {
         foreach (var member in type.GetMembers(name))
             if (member is IPropertySymbol

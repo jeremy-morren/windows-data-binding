@@ -360,16 +360,34 @@ type itself may never be generic.
 
 #### Common
 
-| Source type    | Output property |
-| :------------- | :- |
-| `TimeZoneInfo` | 2 properties: `string _Id` (`Id`) and `string _DisplayName` (`DisplayName`) |
-| `IPAddress`    | 4 properties: the address itself, `string _Formatted` (`ToString()`), `AddressFamily _AddressFamily`, `string _AddressFamily_Formatted` (`AddressFamily.ToString()`) |
-| `IPNetwork`    | NET8+. The network itself, `int _PrefixLength`, `string _Formatted`, and `_BaseAddress` flattened through the `IPAddress` row above — `_BaseAddress`, `_BaseAddress_Formatted`, `_BaseAddress_AddressFamily`, `_BaseAddress_AddressFamily_Formatted` |
+| Source type                   | Output property |
+| :---------------------------- | :- |
+| `TimeZoneInfo`                | 2 properties: `string _Id` (`Id`) and `string _DisplayName` (`DisplayName`) |
+| `Exception`                   | 4 properties: the exception itself, `string _Message`, `string _StackTrace`, and `string _Display` (`ToString()`) |
+| `ArgumentException`           | adds `string _ParamName` |
+| `ArgumentOutOfRangeException` | adds `object _ActualValue` |
+| `HttpRequestException`        | adds `HttpStatusCode _StatusCode`, on NET5 and later |
+| `IPAddress`                   | 4 properties: the address itself, `string _Formatted` (`ToString()`), `AddressFamily _AddressFamily`, `string _AddressFamily_Formatted` (`AddressFamily.ToString()`) |
+| `IPNetwork`                   | NET8+. The network itself, `int _PrefixLength`, `string _Formatted`, and `_BaseAddress` flattened through the `IPAddress` row above — `_BaseAddress`, `_BaseAddress_Formatted`, `_BaseAddress_AddressFamily`, `_BaseAddress_AddressFamily_Formatted` |
 
 `IPAddress`'s rendered form is spelled out as `ToString()` rather than left to the
 [formattable rule](#formattable-types): it implements `IFormattable` explicitly, so that rule would reach it
 through a cast, and before NET6 it does not implement the interface at all — where the cast would throw.
 `IPNetwork` has no such problem, so its `_Formatted` is left to that rule, which casts.
+
+A row applies to the type it names **and to everything deriving from it**, and a row for a derived type
+*adds* to the rows of its bases rather than replacing them. So an `ArgumentNullException` property collects
+all four `Exception` properties plus `_ParamName`, and an `HttpRequestException` gets the four plus
+`_StatusCode`. A property declared as a concrete `DateTimeZone` is likewise described by the row written for
+the abstract base.
+
+An exception is worth a row because walking it reaches `TargetSite`, a whole reflection graph, and `Data`, a
+dictionary. `_Display` is the useful whole of it — type, message, stack trace and every inner exception —
+with `_Message` for a column narrow enough to read.
+
+A row's property is dropped when the framework the consuming code targets does not have the member behind
+it, which is how `HttpRequestException._StatusCode` appears on NET5 and later and simply is not there before.
+Nothing is guessed from the target framework: the member is looked for in the compilation.
 
 A row may land on a type that has a row of its own, as `IPNetwork._BaseAddress` lands on `IPAddress`. That
 row then takes over, its properties hanging off the segment that reached it — so `_BaseAddress` is the
@@ -419,10 +437,18 @@ object binds even where the graph cannot be flattened.
 
 `string`, `bool`, `char`, `System.Half`, `float`, `double`, `decimal`, 
 `byte`, `sbyte`, `short`, `int`, `long`, `ushort`, `uint`, `ulong`, `Int128`, `UInt128`,
-`Uri`, `Guid`, `Version`, `Type`, `CultureInfo`,
+`Uri`, `Guid`, `Version`, `Type`, `CultureInfo`, `BigInteger`, `Rune`, `Index`,
 `DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly`
 
 Any `enum` is passed through as-is.
+
+A member is skipped entirely when its type is a **ref struct**: it cannot be boxed, and a nullable chain
+would ask for `ReadOnlySpan<char>?`, which the language forbids. `ReadOnlyMemory<T>.Span` is the one that
+turns up in practice.
+
+A name is bound once however many times it is declared. An `override` or a `new` member hides what it
+replaces, and the most derived declaration is the one reachable by name, so the base declaration the walk
+meets on its way up the chain is passed over.
 
 #### Collections
 

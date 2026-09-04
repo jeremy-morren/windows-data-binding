@@ -413,4 +413,95 @@ public class NodaTimeTests
             "public global::System.Net.IPAddress? Inner_Range_BaseAddress => "
             + "_source.Inner?.Range.BaseAddress;");
     }
+
+    [Fact]
+    public void Binds_an_exception_to_its_display_text()
+    {
+        var source = TestSources.Wrap("""
+            public class Model
+            {
+                /// <summary>What went wrong</summary>
+                public System.Exception Error { get; set; }
+
+                public System.InvalidOperationException Specific { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        result.Source.Should().Contain("public global::System.Exception? Error => _source.Error;");
+        result.Source.Should().Contain("public string? Error_Message => _source.Error?.Message;");
+        result.Source.Should().Contain("public string? Error_StackTrace => _source.Error?.StackTrace;");
+        result.Source.Should().Contain("public string? Error_Display => _source.Error?.ToString();");
+
+        // An entry stops the traversal, so none of the reflection graph behind TargetSite is reached.
+        result.Source.Should().NotContain("TargetSite");
+        result.Source.Should().NotContain("Error_InnerException");
+        result.Source.Should().NotContain("Error_HResult");
+
+        // The entry is written for the base, and a property declared as a derived exception is the usual
+        // case, so the nearest base with an entry answers for it.
+        result.Source.Should().Contain("public global::System.Exception? Specific => _source.Specific;");
+        result.Source.Should().Contain("public string? Specific_Display => _source.Specific?.ToString();");
+        result.Source.Should().Contain("public string? Specific_Message => _source.Specific?.Message;");
+
+        result.Source.Should().Contain(
+            """[global::System.ComponentModel.Description("What went wrong (Display)")]""");
+    }
+
+    [Fact]
+    public void Adds_what_a_particular_exception_knows_to_what_every_exception_knows()
+    {
+        var source = TestSources.Wrap("""
+            public class Model
+            {
+                public System.ArgumentNullException Missing { get; set; }
+                public System.ArgumentOutOfRangeException Range { get; set; }
+            }
+            """);
+
+        var result = TestHarness.AssertCompiles(source);
+
+        result.Should().HaveNoDiagnostics();
+
+        // ArgumentNullException derives from ArgumentException, whose row adds ParamName to Exception's.
+        result.Source.Should().Contain("public string? Missing_Message => _source.Missing?.Message;");
+        result.Source.Should().Contain("public string? Missing_ParamName => _source.Missing?.ParamName;");
+
+        // And one more level down, all three rows apply.
+        result.Source.Should().Contain("public string? Range_Display => _source.Range?.ToString();");
+        result.Source.Should().Contain("public string? Range_ParamName => _source.Range?.ParamName;");
+        result.Source.Should().Contain("public object? Range_ActualValue => _source.Range?.ActualValue;");
+    }
+
+    [Theory]
+    [InlineData(Target.Net8)]
+    [InlineData(Target.NetStandard20)]
+    public void Reads_a_status_code_only_where_the_framework_has_one(Target target)
+    {
+        var source = TestSources.Wrap("""
+            public class Model { public System.Net.Http.HttpRequestException Failure { get; set; } }
+            """);
+
+        var result = TestHarness.AssertCompiles(source, target);
+
+        result.Should().HaveNoDiagnostics();
+
+        // Every framework has these.
+        result.Source.Should().Contain("public string? Failure_Message => _source.Failure?.Message;");
+
+        // HttpRequestException.StatusCode arrived in NET5. Emitting it against netstandard2.0 would not
+        // compile, so the row's own member is dropped there rather than guessed at.
+        if (target == Target.Net8)
+        {
+            result.Source.Should().Contain(
+                "public global::System.Net.HttpStatusCode? Failure_StatusCode => _source.Failure?.StatusCode;");
+        }
+        else
+        {
+            result.Source.Should().NotContain("StatusCode");
+        }
+    }
 }
