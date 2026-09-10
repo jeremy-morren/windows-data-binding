@@ -1,5 +1,5 @@
 <Project>
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(PackageVersion)' == ''">
     <VersionPrefix>1.0.0</VersionPrefix>
     <VersionSuffix Condition="'$(VersionSuffix)' == ''">beta01</VersionSuffix>
     <PackageVersion Condition="'$(VersionSuffix)' == ''">$(VersionPrefix)</PackageVersion>

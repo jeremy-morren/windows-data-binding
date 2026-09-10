@@ -1,0 +1,27 @@
+<!--
+  Consumes the generator straight from source, instead of through the NuGet package. A project in this
+  repository - or in one that vendors it as a submodule - gets the generator with a single line:
+
+    <Import Project="..\..\WinDataBinding.ProjectReference.props" />
+
+  The two references below are what the package lays out for you, and both halves are needed:
+
+    * The generator flows as an analyzer only. Without OutputItemType it never runs; without
+      ReferenceOutputAssembly="false" the netstandard2.0 Roslyn component also lands in the consumer's
+      compile references, where it has no business being - `using WinDataBinding;` then starts resolving
+      against the generator assembly instead of the attributes.
+    * The attributes flow as an ordinary reference, the way lib/netstandard2.0 does in the package, so
+      consuming code can apply them and the declaring assembly reaches the consumer's output and travels
+      on to anything referencing it. Reading an attribute back reflectively loads that assembly, so this
+      is a runtime dependency and must not be made private.
+-->
+<Project>
+
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\WinDataBinding.SourceGenerator\WinDataBinding.SourceGenerator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src\WinDataBinding.SourceGenerator.Attributes\WinDataBinding.SourceGenerator.Attributes.csproj" />
+  </ItemGroup>
+
+</Project>

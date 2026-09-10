@@ -124,6 +124,8 @@ namespace Demo
 
 ## Installation
 
+### From NuGet
+
 ```xml
 <Project>
   <ItemGroup>
@@ -148,6 +150,26 @@ To keep the generator itself from running in projects downstream of yours, make 
 
 ```xml
 <PackageReference Include="WinDataBinding" Version="1.0.0-*" PrivateAssets="analyzers" />
+```
+
+### From source, as a project reference
+
+Direct reference as a submodule:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="windows-data-binding/WinDataBinding.ProjectReference.props" />
+</Project>
+```
+
+which expands to
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="...\WinDataBinding.SourceGenerator.csproj"
+                    OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  <ProjectReference Include="...\WinDataBinding.SourceGenerator.Attributes.csproj" />
+</ItemGroup>
 ```
 
 ## Descriptions
