@@ -28,14 +28,14 @@
     the net8 one drags in System.Runtime 8.0 and fails to bind against netstandard reference assemblies. 
   -->
   <ItemGroup>
-    <None Include="$(PkgNodaTime)\lib\netstandard2.0\NodaTime.dll"
-          Link="refs\netstandard2.0\NodaTime.dll" 
+    <None Include="$(PkgNodaTime)/lib/netstandard2.0/NodaTime.dll"
+          Link="refs/netstandard2.0/NodaTime.dll" 
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\WinDataBinding.SourceGenerator.Attributes\WinDataBinding.SourceGenerator.Attributes.csproj" />
-    <ProjectReference Include="..\..\src\WinDataBinding.SourceGenerator\WinDataBinding.SourceGenerator.csproj" />
+    <ProjectReference Include="../../src/WinDataBinding.SourceGenerator.Attributes/WinDataBinding.SourceGenerator.Attributes.csproj" />
+    <ProjectReference Include="../../src/WinDataBinding.SourceGenerator/WinDataBinding.SourceGenerator.csproj" />
   </ItemGroup>
 
   <ItemGroup>

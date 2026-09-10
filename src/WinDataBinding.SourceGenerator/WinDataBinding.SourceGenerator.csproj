@@ -22,7 +22,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" ExcludeAssets="runtime" />
 
     <!-- PrivateAssets so the package declares no dependency on it; the assembly itself is packed instead. -->
-    <ProjectReference Include="..\WinDataBinding.SourceGenerator.Attributes\WinDataBinding.SourceGenerator.Attributes.csproj" PrivateAssets="All" />
+    <ProjectReference Include="../WinDataBinding.SourceGenerator.Attributes/WinDataBinding.SourceGenerator.Attributes.csproj" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>

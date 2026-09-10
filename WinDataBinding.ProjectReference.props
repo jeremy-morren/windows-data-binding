@@ -14,13 +14,15 @@
       consuming code can apply them and the declaring assembly reaches the consumer's output and travels
       on to anything referencing it. Reading an attribute back reflectively loads that assembly, so this
       is a runtime dependency and must not be made private.
+    * The generator is built without the consumer's Platform or RuntimeIdentifier to work with MSIX publish
 -->
 <Project>
 
   <ItemGroup>
     <ProjectReference Include="$(MSBuildThisFileDirectory)src\WinDataBinding.SourceGenerator\WinDataBinding.SourceGenerator.csproj"
                       OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+                      ReferenceOutputAssembly="false"
+                      GlobalPropertiesToRemove="Platform;PlatformTarget;RuntimeIdentifier;RuntimeIdentifiers;SelfContained" />
     <ProjectReference Include="$(MSBuildThisFileDirectory)src\WinDataBinding.SourceGenerator.Attributes\WinDataBinding.SourceGenerator.Attributes.csproj" />
   </ItemGroup>
 
