@@ -35,12 +35,6 @@ internal static class Diagnostics
 {
     private const string Category = "WinDataBinding";
 
-    public static readonly DiagnosticDescriptor CircularReference = new(
-        "WGD001",
-        "Circular reference skipped",
-        "Property '{0}' is skipped because type '{1}' already appears in its property chain",
-        Category, DiagnosticSeverity.Warning, isEnabledByDefault: true);
-
     public static readonly DiagnosticDescriptor NotPartial = new(
         "WGD002",
         "Binding model type must be partial",

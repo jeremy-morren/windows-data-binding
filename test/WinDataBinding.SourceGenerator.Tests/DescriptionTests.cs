@@ -23,43 +23,44 @@ public class DescriptionTests
             """);
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class ModelBinder : global::System.IEquatable<ModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>
+                private readonly global::Demo.Model _source;
+
+                public ModelBinder(global::Demo.Model source)
                 {
-                    private readonly global::Demo.Model _source;
-
-                    public ModelBinder(global::Demo.Model source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    public static ModelBinder? Create(global::Demo.Model? source) =>
-                        source is not null ? new ModelBinder(source) : null;
-
-                    public bool Equals(ModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    [global::System.ComponentModel.Description("Rendered with ToString() for display")]
-                    public string? Rendered => _source.Rendered;
-
-                    [global::System.ComponentModel.Description("See for the text form")]
-                    public int Raw => _source.Raw;
-
-                    [global::System.ComponentModel.Description("Spread over several lines")]
-                    public int Wrapped => _source.Wrapped;
                 }
+
+                public global::Demo.Model GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                public static ModelBinder? Create(global::Demo.Model? source) =>
+                    source is not null ? new ModelBinder(source) : null;
+
+                public bool Equals(ModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                [global::System.ComponentModel.Description("Rendered with ToString() for display")]
+                public string? Rendered => _source.Rendered;
+
+                [global::System.ComponentModel.Description("See for the text form")]
+                public int Raw => _source.Raw;
+
+                [global::System.ComponentModel.Description("Spread over several lines")]
+                public int Wrapped => _source.Wrapped;
             }
             """;
 

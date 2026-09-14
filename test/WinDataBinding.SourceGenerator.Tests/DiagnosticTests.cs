@@ -5,7 +5,7 @@ namespace WinDataBinding.SourceGenerator.Tests;
 public class DiagnosticTests
 {
     [Fact]
-    public void Skips_a_circular_reference_and_warns()
+    public void Flattens_one_repeat_of_a_circular_reference()
     {
         var source = TestSources.Wrap("""
             public class Node
@@ -18,47 +18,54 @@ public class DiagnosticTests
             """);
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class ModelBinder : global::System.IEquatable<ModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>
+                private readonly global::Demo.Model _source;
+
+                public ModelBinder(global::Demo.Model source)
                 {
-                    private readonly global::Demo.Model _source;
-
-                    public ModelBinder(global::Demo.Model source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    public static ModelBinder? Create(global::Demo.Model? source) =>
-                        source is not null ? new ModelBinder(source) : null;
-
-                    public bool Equals(ModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    public global::Demo.Node? Node => _source.Node;
-
-                    public int? Node_Value => _source.Node?.Value;
                 }
+
+                public global::Demo.Model GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                public static ModelBinder? Create(global::Demo.Model? source) =>
+                    source is not null ? new ModelBinder(source) : null;
+
+                public bool Equals(ModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                public global::Demo.Node? Node => _source.Node;
+
+                public global::Demo.Model? Node_Owner => _source.Node?.Owner;
+
+                public global::Demo.Node? Node_Owner_Node => _source.Node?.Owner?.Node;
+
+                public int? Node_Owner_Node_Value => _source.Node?.Owner?.Node?.Value;
+
+                public int? Node_Value => _source.Node?.Value;
             }
             """;
 
-        var result = TestHarness.AssertGenerated(expected, source);
-        TestHarness.AssertDiagnostic(result, "WGD001", DiagnosticSeverity.Warning);
+        // The repeat is worth binding; only the copy after it is dropped, and that is not worth saying.
+        TestHarness.AssertGenerated(expected, source).Should().HaveNoDiagnostics();
     }
 
     [Fact]
-    public void Detects_a_cycle_that_does_not_pass_through_the_root()
+    public void Flattens_one_repeat_of_a_cycle_that_does_not_pass_through_the_root()
     {
         var source = TestSources.Wrap("""
             public class A { public B B { get; set; } }
@@ -69,8 +76,12 @@ public class DiagnosticTests
 
         var result = TestHarness.AssertCompiles(source);
 
-        TestHarness.AssertDiagnostic(result, "WGD001", DiagnosticSeverity.Warning);
+        result.Should().HaveNoDiagnostics();
         Assert.Contains("public int? Root_B_Value => _source.Root?.B?.Value;", result.Body);
+        Assert.Contains("public int? Root_B_A_B_Value => _source.Root?.B?.A?.B?.Value;", result.Body);
+
+        // Each type comes round once; the chain stops before A would appear a third time.
+        Assert.DoesNotContain("Root_B_A_B_A", result.Body);
     }
 
     [Fact]

@@ -25,110 +25,111 @@ public class NodaTimeTests
     public void Converts_every_type_in_the_table()
     {
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class ModelBinder : global::System.IEquatable<ModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>
+                private readonly global::Demo.Model _source;
+
+                public ModelBinder(global::Demo.Model source)
                 {
-                    private readonly global::Demo.Model _source;
-
-                    public ModelBinder(global::Demo.Model source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    public static ModelBinder? Create(global::Demo.Model? source) =>
-                        source is not null ? new ModelBinder(source) : null;
-
-                    public bool Equals(ModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    public global::System.DateTime Instant => _source.Instant.ToDateTimeUtc();
-
-                    public string? Instant_Formatted => _source.Instant.ToString(null, null);
-
-                    public string? Zone => _source.Zone?.Id;
-
-                    public global::System.DateTimeOffset OffsetDateTime => _source.OffsetDateTime.ToDateTimeOffset();
-
-                    public global::System.DateTime OffsetDateTime_Utc => _source.OffsetDateTime.ToInstant().ToDateTimeUtc();
-
-                    public global::System.DateTime OffsetDateTime_Local => _source.OffsetDateTime.LocalDateTime.ToDateTimeUnspecified();
-
-                    public global::System.TimeSpan OffsetDateTime_Offset => _source.OffsetDateTime.Offset.ToTimeSpan();
-
-                    public string? OffsetDateTime_Formatted => _source.OffsetDateTime.ToString(null, null);
-
-                    public global::System.DateTimeOffset Zoned => _source.Zoned.ToDateTimeOffset();
-
-                    public global::System.DateTime Zoned_Utc => _source.Zoned.ToDateTimeUtc();
-
-                    public global::System.DateTime Zoned_Local => _source.Zoned.ToDateTimeUnspecified();
-
-                    public global::System.TimeSpan Zoned_Offset => _source.Zoned.Offset.ToTimeSpan();
-
-                    public string? Zoned_Timezone => _source.Zoned.Zone.Id;
-
-                    public string? Zoned_Formatted => _source.Zoned.ToString(null, null);
-
-                    public global::System.DateTime LocalDateTime => _source.LocalDateTime.ToDateTimeUnspecified();
-
-                    public string? LocalDateTime_Formatted => _source.LocalDateTime.ToString(null, null);
-
-            #if NET6_0_OR_GREATER
-                    public global::System.DateOnly LocalDate => _source.LocalDate.ToDateOnly();
-            #else
-                    public global::System.DateTime LocalDate => _source.LocalDate.ToDateTimeUnspecified();
-            #endif
-
-                    public string? LocalDate_Formatted => _source.LocalDate.ToString(null, null);
-
-            #if NET6_0_OR_GREATER
-                    public global::System.TimeOnly LocalTime => _source.LocalTime.ToTimeOnly();
-            #else
-                    public global::System.TimeSpan LocalTime => global::System.TimeSpan.FromTicks(_source.LocalTime.TickOfDay);
-            #endif
-
-                    public string? LocalTime_Formatted => _source.LocalTime.ToString(null, null);
-
-                    public global::System.TimeSpan Duration => _source.Duration.ToTimeSpan();
-
-                    public string? Duration_Formatted => _source.Duration.ToString(null, null);
-
-                    public global::System.TimeSpan Offset => _source.Offset.ToTimeSpan();
-
-                    public string? Offset_Formatted => _source.Offset.ToString(null, null);
-
-            #if NET6_0_OR_GREATER
-                    public global::System.DateOnly YearMonth => _source.YearMonth.OnDayOfMonth(1).ToDateOnly();
-            #else
-                    public global::System.DateTime YearMonth => _source.YearMonth.OnDayOfMonth(1).ToDateTimeUnspecified();
-            #endif
-
-                    public string? YearMonth_Formatted => _source.YearMonth.ToString(null, null);
-
-                    public global::System.DateTime? Interval_Start => _source.Interval.HasStart ? _source.Interval.Start.ToDateTimeUtc() : null;
-
-                    public global::System.DateTime? Interval_End => _source.Interval.HasEnd ? _source.Interval.End.ToDateTimeUtc() : null;
-
-                    public global::System.TimeSpan? Interval_Duration => _source.Interval.HasStart && _source.Interval.HasEnd ? _source.Interval.Duration.ToTimeSpan() : null;
-
-                    public string? Period => _source.Period?.ToString();
-
-                    public string? TimeZone_Id => _source.TimeZone?.Id;
-
-                    public string? TimeZone_DisplayName => _source.TimeZone?.DisplayName;
                 }
+
+                public global::Demo.Model GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                public static ModelBinder? Create(global::Demo.Model? source) =>
+                    source is not null ? new ModelBinder(source) : null;
+
+                public bool Equals(ModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                public global::System.DateTime Instant => _source.Instant.ToDateTimeUtc();
+
+                public string? Instant_Formatted => _source.Instant.ToString(null, null);
+
+                public string? Zone => _source.Zone?.Id;
+
+                public global::System.DateTimeOffset OffsetDateTime => _source.OffsetDateTime.ToDateTimeOffset();
+
+                public global::System.DateTime OffsetDateTime_Utc => _source.OffsetDateTime.ToInstant().ToDateTimeUtc();
+
+                public global::System.DateTime OffsetDateTime_Local => _source.OffsetDateTime.LocalDateTime.ToDateTimeUnspecified();
+
+                public global::System.TimeSpan OffsetDateTime_Offset => _source.OffsetDateTime.Offset.ToTimeSpan();
+
+                public string? OffsetDateTime_Formatted => _source.OffsetDateTime.ToString(null, null);
+
+                public global::System.DateTimeOffset Zoned => _source.Zoned.ToDateTimeOffset();
+
+                public global::System.DateTime Zoned_Utc => _source.Zoned.ToDateTimeUtc();
+
+                public global::System.DateTime Zoned_Local => _source.Zoned.ToDateTimeUnspecified();
+
+                public global::System.TimeSpan Zoned_Offset => _source.Zoned.Offset.ToTimeSpan();
+
+                public string? Zoned_Timezone => _source.Zoned.Zone.Id;
+
+                public string? Zoned_Formatted => _source.Zoned.ToString(null, null);
+
+                public global::System.DateTime LocalDateTime => _source.LocalDateTime.ToDateTimeUnspecified();
+
+                public string? LocalDateTime_Formatted => _source.LocalDateTime.ToString(null, null);
+
+            #if NET6_0_OR_GREATER
+                public global::System.DateOnly LocalDate => _source.LocalDate.ToDateOnly();
+            #else
+                public global::System.DateTime LocalDate => _source.LocalDate.ToDateTimeUnspecified();
+            #endif
+
+                public string? LocalDate_Formatted => _source.LocalDate.ToString(null, null);
+
+            #if NET6_0_OR_GREATER
+                public global::System.TimeOnly LocalTime => _source.LocalTime.ToTimeOnly();
+            #else
+                public global::System.TimeSpan LocalTime => global::System.TimeSpan.FromTicks(_source.LocalTime.TickOfDay);
+            #endif
+
+                public string? LocalTime_Formatted => _source.LocalTime.ToString(null, null);
+
+                public global::System.TimeSpan Duration => _source.Duration.ToTimeSpan();
+
+                public string? Duration_Formatted => _source.Duration.ToString(null, null);
+
+                public global::System.TimeSpan Offset => _source.Offset.ToTimeSpan();
+
+                public string? Offset_Formatted => _source.Offset.ToString(null, null);
+
+            #if NET6_0_OR_GREATER
+                public global::System.DateOnly YearMonth => _source.YearMonth.OnDayOfMonth(1).ToDateOnly();
+            #else
+                public global::System.DateTime YearMonth => _source.YearMonth.OnDayOfMonth(1).ToDateTimeUnspecified();
+            #endif
+
+                public string? YearMonth_Formatted => _source.YearMonth.ToString(null, null);
+
+                public global::System.DateTime? Interval_Start => _source.Interval.HasStart ? _source.Interval.Start.ToDateTimeUtc() : null;
+
+                public global::System.DateTime? Interval_End => _source.Interval.HasEnd ? _source.Interval.End.ToDateTimeUtc() : null;
+
+                public global::System.TimeSpan? Interval_Duration => _source.Interval.HasStart && _source.Interval.HasEnd ? _source.Interval.Duration.ToTimeSpan() : null;
+
+                public string? Period => _source.Period?.ToString();
+
+                public string? TimeZone_Id => _source.TimeZone?.Id;
+
+                public string? TimeZone_DisplayName => _source.TimeZone?.DisplayName;
             }
             """;
 
@@ -157,50 +158,51 @@ public class NodaTimeTests
             """);
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class ModelBinder : global::System.IEquatable<ModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>
+                private readonly global::Demo.Model _source;
+
+                public ModelBinder(global::Demo.Model source)
                 {
-                    private readonly global::Demo.Model _source;
-
-                    public ModelBinder(global::Demo.Model source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    public static ModelBinder? Create(global::Demo.Model? source) =>
-                        source is not null ? new ModelBinder(source) : null;
-
-                    public bool Equals(ModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    public global::Demo.Inner? Inner => _source.Inner;
-
-                    public global::System.DateTime? Inner_Interval_Start => _source.Inner?.Interval.HasStart == true ? _source.Inner.Interval.Start.ToDateTimeUtc() : null;
-
-                    public global::System.DateTime? Inner_Interval_End => _source.Inner?.Interval.HasEnd == true ? _source.Inner.Interval.End.ToDateTimeUtc() : null;
-
-                    public global::System.TimeSpan? Inner_Interval_Duration => _source.Inner?.Interval.HasStart == true && _source.Inner.Interval.HasEnd ? _source.Inner.Interval.Duration.ToTimeSpan() : null;
-
-            #if NET6_0_OR_GREATER
-                    public global::System.TimeOnly? Inner_Time => _source.Inner?.Time.ToTimeOnly();
-            #else
-                    public global::System.TimeSpan? Inner_Time => _source.Inner?.Time.TickOfDay is { } ticks ? global::System.TimeSpan.FromTicks(ticks) : null;
-            #endif
-
-                    public string? Inner_Time_Formatted => _source.Inner?.Time.ToString(null, null);
                 }
+
+                public global::Demo.Model GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                public static ModelBinder? Create(global::Demo.Model? source) =>
+                    source is not null ? new ModelBinder(source) : null;
+
+                public bool Equals(ModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                public global::Demo.Inner? Inner => _source.Inner;
+
+                public global::System.DateTime? Inner_Interval_Start => _source.Inner?.Interval.HasStart == true ? _source.Inner.Interval.Start.ToDateTimeUtc() : null;
+
+                public global::System.DateTime? Inner_Interval_End => _source.Inner?.Interval.HasEnd == true ? _source.Inner.Interval.End.ToDateTimeUtc() : null;
+
+                public global::System.TimeSpan? Inner_Interval_Duration => _source.Inner?.Interval.HasStart == true && _source.Inner.Interval.HasEnd ? _source.Inner.Interval.Duration.ToTimeSpan() : null;
+
+            #if NET6_0_OR_GREATER
+                public global::System.TimeOnly? Inner_Time => _source.Inner?.Time.ToTimeOnly();
+            #else
+                public global::System.TimeSpan? Inner_Time => _source.Inner?.Time.TickOfDay is { } ticks ? global::System.TimeSpan.FromTicks(ticks) : null;
+            #endif
+
+                public string? Inner_Time_Formatted => _source.Inner?.Time.ToString(null, null);
             }
             """;
 

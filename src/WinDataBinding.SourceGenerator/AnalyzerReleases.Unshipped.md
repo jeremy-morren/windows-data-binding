@@ -5,7 +5,6 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
-WGD001 | WinDataBinding | Warning | Circular reference skipped
 WGD002 | WinDataBinding | Error | Binding model type must be partial
 WGD003 | WinDataBinding | Error | Open generic types are not supported
 WGD004 | WinDataBinding | Error | Containing type must be partial

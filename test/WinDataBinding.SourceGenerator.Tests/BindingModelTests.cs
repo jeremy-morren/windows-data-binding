@@ -50,79 +50,80 @@ public class BindingModelTests
             """;
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class PersonModelBinder : global::System.IEquatable<PersonModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class PersonModelBinder : global::System.IEquatable<PersonModelBinder>
+                private readonly global::Demo.Person _source;
+
+                public PersonModelBinder(global::Demo.Person source)
                 {
-                    private readonly global::Demo.Person _source;
-
-                    public PersonModelBinder(global::Demo.Person source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    public static PersonModelBinder? Create(global::Demo.Person? source) =>
-                        source is not null ? new PersonModelBinder(source) : null;
-
-                    public bool Equals(PersonModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is PersonModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.GetHashCode(_source);
-
-                    [global::System.ComponentModel.Description("Person name")]
-                    public string? Name => _source.Name;
-
-                    [global::System.ComponentModel.Description("Person's address")]
-                    public global::Demo.Address? Address => _source.Address;
-
-                    [global::System.ComponentModel.Description("Person's address")]
-                    public string? Address_Street => _source.Address?.Street;
-
-                    [global::System.ComponentModel.Description("Person's address")]
-                    public string? Address_City => _source.Address?.City;
-
-                    [global::System.ComponentModel.Description("Person's address: Address state")]
-                    public string? Address_State => _source.Address?.State;
-
-                    [global::System.ComponentModel.Description("The timestamp that the person was created at")]
-                    public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
-
-                    [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
-                    public string? CreatedAt_Formatted => _source.CreatedAt.ToString(null, null);
-
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone")]
-                    public global::Demo.LoginInfo? LastLogin => _source.LastLogin;
-
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone")]
-                    public int? LastLogin_Id => _source.LastLogin?.Id;
-
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at")]
-                    public global::System.DateTimeOffset? LastLogin_Timestamp => _source.LastLogin?.Timestamp.ToDateTimeOffset();
-
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Utc)")]
-                    public global::System.DateTime? LastLogin_Timestamp_Utc => _source.LastLogin?.Timestamp.ToDateTimeUtc();
-
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Local)")]
-                    public global::System.DateTime? LastLogin_Timestamp_Local => _source.LastLogin?.Timestamp.ToDateTimeUnspecified();
-
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Offset)")]
-                    public global::System.TimeSpan? LastLogin_Timestamp_Offset => _source.LastLogin?.Timestamp.Offset.ToTimeSpan();
-
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
-                    public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
-
-                    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
-                    public string? LastLogin_Timestamp_Formatted => _source.LastLogin?.Timestamp.ToString(null, null);
                 }
+
+                public global::Demo.Person GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                public static PersonModelBinder? Create(global::Demo.Person? source) =>
+                    source is not null ? new PersonModelBinder(source) : null;
+
+                public bool Equals(PersonModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is PersonModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Person>.Default.GetHashCode(_source);
+
+                [global::System.ComponentModel.Description("Person name")]
+                public string? Name => _source.Name;
+
+                [global::System.ComponentModel.Description("Person's address")]
+                public global::Demo.Address? Address => _source.Address;
+
+                [global::System.ComponentModel.Description("Person's address")]
+                public string? Address_Street => _source.Address?.Street;
+
+                [global::System.ComponentModel.Description("Person's address")]
+                public string? Address_City => _source.Address?.City;
+
+                [global::System.ComponentModel.Description("Person's address: Address state")]
+                public string? Address_State => _source.Address?.State;
+
+                [global::System.ComponentModel.Description("The timestamp that the person was created at")]
+                public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
+
+                [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
+                public string? CreatedAt_Formatted => _source.CreatedAt.ToString(null, null);
+
+                [global::System.ComponentModel.Description("Last login in the user's local timezone")]
+                public global::Demo.LoginInfo? LastLogin => _source.LastLogin;
+
+                [global::System.ComponentModel.Description("Last login in the user's local timezone")]
+                public int? LastLogin_Id => _source.LastLogin?.Id;
+
+                [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at")]
+                public global::System.DateTimeOffset? LastLogin_Timestamp => _source.LastLogin?.Timestamp.ToDateTimeOffset();
+
+                [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Utc)")]
+                public global::System.DateTime? LastLogin_Timestamp_Utc => _source.LastLogin?.Timestamp.ToDateTimeUtc();
+
+                [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Local)")]
+                public global::System.DateTime? LastLogin_Timestamp_Local => _source.LastLogin?.Timestamp.ToDateTimeUnspecified();
+
+                [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Offset)")]
+                public global::System.TimeSpan? LastLogin_Timestamp_Offset => _source.LastLogin?.Timestamp.Offset.ToTimeSpan();
+
+                [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
+                public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
+
+                [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
+                public string? LastLogin_Timestamp_Formatted => _source.LastLogin?.Timestamp.ToString(null, null);
             }
             """;
 
@@ -148,60 +149,61 @@ public class BindingModelTests
             """);
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class ModelBinder : global::System.IEquatable<ModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>
+                private readonly global::Demo.Model _source;
+
+                public ModelBinder(global::Demo.Model source)
                 {
-                    private readonly global::Demo.Model _source;
-
-                    public ModelBinder(global::Demo.Model source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    public static ModelBinder? Create(global::Demo.Model? source) =>
-                        source is not null ? new ModelBinder(source) : null;
-
-                    public bool Equals(ModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    public global::System.Collections.Generic.List<int>? Numbers => _source.Numbers;
-
-                    public int? Numbers_Count => _source.Numbers?.Count;
-
-                    public string? Numbers_Display => _source.Numbers is { } items ? global::System.String.Join(", ", global::System.Linq.Enumerable.Select(items, item => item.ToString(null, null))) : null;
-
-                    public string? Numbers_Array => Numbers_Display is { } display ? $"[{display}]" : null;
-
-                    public string[]? Names => _source.Names;
-
-                    public int? Names_Count => _source.Names?.Length;
-
-                    public string? Names_Display => _source.Names is { } items ? global::System.String.Join(", ", items) : null;
-
-                    public string? Names_Array => Names_Display is { } display ? $"[{display}]" : null;
-
-                    public global::Demo.Colour Colour => _source.Colour;
-
-                    public global::Demo.Colour? MaybeColour => _source.MaybeColour;
-
-                    public int Field => _source.Field;
-
-                    public int? Nullable => _source.Nullable;
-
-                    public string? Text => _source.Text;
                 }
+
+                public global::Demo.Model GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                public static ModelBinder? Create(global::Demo.Model? source) =>
+                    source is not null ? new ModelBinder(source) : null;
+
+                public bool Equals(ModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                public global::System.Collections.Generic.List<int>? Numbers => _source.Numbers;
+
+                public int? Numbers_Count => _source.Numbers?.Count;
+
+                public string? Numbers_Display => _source.Numbers is { } items ? global::System.String.Join(", ", global::System.Linq.Enumerable.Select(items, item => item.ToString(null, null))) : null;
+
+                public string? Numbers_Array => Numbers_Display is { } display ? $"[{display}]" : null;
+
+                public string[]? Names => _source.Names;
+
+                public int? Names_Count => _source.Names?.Length;
+
+                public string? Names_Display => _source.Names is { } items ? global::System.String.Join(", ", items) : null;
+
+                public string? Names_Array => Names_Display is { } display ? $"[{display}]" : null;
+
+                public global::Demo.Colour Colour => _source.Colour;
+
+                public global::Demo.Colour? MaybeColour => _source.MaybeColour;
+
+                public int Field => _source.Field;
+
+                public int? Nullable => _source.Nullable;
+
+                public string? Text => _source.Text;
             }
             """;
 
@@ -216,10 +218,7 @@ public class BindingModelTests
         var result = TestHarness.AssertCompiles(source);
 
         result.Source.Should().StartWith("""
-            // <auto-generated>
-            //     This file was generated by WinDataBinding.SourceGenerator.
-            //     Changes to this file will be lost if the code is regenerated.
-            // </auto-generated>
+            // <auto-generated/>
             // ReSharper disable all
             #nullable enable annotations
             #nullable disable warnings
@@ -250,45 +249,46 @@ public class BindingModelTests
             """);
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class ModelBinder : global::System.IEquatable<ModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>
+                private readonly global::Demo.Model _source;
+
+                public ModelBinder(global::Demo.Model source)
                 {
-                    private readonly global::Demo.Model _source;
-
-                    public ModelBinder(global::Demo.Model source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    public static ModelBinder? Create(global::Demo.Model? source) =>
-                        source is not null ? new ModelBinder(source) : null;
-
-                    public bool Equals(ModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    [global::System.ComponentModel.Description("From the first part")]
-                    public string? First => _source.First;
-
-                    public int Second => _source.Second;
-
-                    public global::Demo.Detail? Detail => _source.Detail;
-
-                    public string? Detail_Left => _source.Detail?.Left;
-
-                    public string? Detail_Right => _source.Detail?.Right;
                 }
+
+                public global::Demo.Model GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                public static ModelBinder? Create(global::Demo.Model? source) =>
+                    source is not null ? new ModelBinder(source) : null;
+
+                public bool Equals(ModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                [global::System.ComponentModel.Description("From the first part")]
+                public string? First => _source.First;
+
+                public int Second => _source.Second;
+
+                public global::Demo.Detail? Detail => _source.Detail;
+
+                public string? Detail_Left => _source.Detail?.Left;
+
+                public string? Detail_Right => _source.Detail?.Right;
             }
             """;
 
@@ -305,38 +305,39 @@ public class BindingModelTests
             """);
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class ModelBinder : global::System.IEquatable<ModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>
+                private readonly global::Demo.Model _source;
+
+                internal ModelBinder(global::Demo.Model source)
                 {
-                    private readonly global::Demo.Model _source;
-
-                    internal ModelBinder(global::Demo.Model source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    internal static ModelBinder? Create(global::Demo.Model? source) =>
-                        source is not null ? new ModelBinder(source) : null;
-
-                    public bool Equals(ModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    public int Own => _source.Own;
-
-                    public int BaseValue => _source.BaseValue;
                 }
+
+                internal global::Demo.Model GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                internal static ModelBinder? Create(global::Demo.Model? source) =>
+                    source is not null ? new ModelBinder(source) : null;
+
+                public bool Equals(ModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                public int Own => _source.Own;
+
+                public int BaseValue => _source.BaseValue;
             }
             """;
 
@@ -361,38 +362,39 @@ public class BindingModelTests
             """;
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            partial class Outer
             {
-                partial class Outer
+                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+                partial class Binder : global::System.IEquatable<Binder>
                 {
-                    [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                    partial class Binder : global::System.IEquatable<Binder>
+                    private readonly global::Demo.Model _source;
+
+                    public Binder(global::Demo.Model source)
                     {
-                        private readonly global::Demo.Model _source;
-
-                        public Binder(global::Demo.Model source)
-                        {
             #if NET6_0_OR_GREATER
-                            global::System.ArgumentNullException.ThrowIfNull(source);
-                            _source = source;
+                        global::System.ArgumentNullException.ThrowIfNull(source);
+                        _source = source;
             #else
-                            _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                        }
-
-                        [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                        public static Binder? Create(global::Demo.Model? source) =>
-                            source is not null ? new Binder(source) : null;
-
-                        public bool Equals(Binder? other) =>
-                            other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                        public override bool Equals(object? obj) => obj is Binder other && Equals(other);
-
-                        public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                        public int Value => _source.Value;
                     }
+
+                    public global::Demo.Model GetSource() => _source;
+
+                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                    public static Binder? Create(global::Demo.Model? source) =>
+                        source is not null ? new Binder(source) : null;
+
+                    public bool Equals(Binder? other) =>
+                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                    public override bool Equals(object? obj) => obj is Binder other && Equals(other);
+
+                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                    public int Value => _source.Value;
                 }
             }
             """;
@@ -421,46 +423,47 @@ public class BindingModelTests
             """);
 
         const string expected = """
-            namespace Demo
+            namespace Demo;
+
+            [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
+            partial class ModelBinder : global::System.IEquatable<ModelBinder>
             {
-                [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0")]
-                partial class ModelBinder : global::System.IEquatable<ModelBinder>
+                private readonly global::Demo.Model _source;
+
+                public ModelBinder(global::Demo.Model source)
                 {
-                    private readonly global::Demo.Model _source;
-
-                    public ModelBinder(global::Demo.Model source)
-                    {
             #if NET6_0_OR_GREATER
-                        global::System.ArgumentNullException.ThrowIfNull(source);
-                        _source = source;
+                    global::System.ArgumentNullException.ThrowIfNull(source);
+                    _source = source;
             #else
-                        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+                    _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
             #endif
-                    }
-
-                    [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
-                    public static ModelBinder? Create(global::Demo.Model? source) =>
-                        source is not null ? new ModelBinder(source) : null;
-
-                    public bool Equals(ModelBinder? other) =>
-                        other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
-
-                    public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
-
-                    public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
-
-                    public int GetSet => _source.GetSet;
-
-                    public int GetOnly => _source.GetOnly;
-
-                    public int Init => _source.Init;
-
-                    public int Expression => _source.Expression;
-
-                    public int PrivateSet => _source.PrivateSet;
-
-                    public int Field => _source.Field;
                 }
+
+                public global::Demo.Model GetSource() => _source;
+
+                [return: global::System.Diagnostics.CodeAnalysis.NotNullIfNotNull("source")]
+                public static ModelBinder? Create(global::Demo.Model? source) =>
+                    source is not null ? new ModelBinder(source) : null;
+
+                public bool Equals(ModelBinder? other) =>
+                    other is not null && global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.Equals(_source, other._source);
+
+                public override bool Equals(object? obj) => obj is ModelBinder other && Equals(other);
+
+                public override int GetHashCode() => _source is null ? 0 : global::System.Collections.Generic.EqualityComparer<global::Demo.Model>.Default.GetHashCode(_source);
+
+                public int GetSet => _source.GetSet;
+
+                public int GetOnly => _source.GetOnly;
+
+                public int Init => _source.Init;
+
+                public int Expression => _source.Expression;
+
+                public int PrivateSet => _source.PrivateSet;
+
+                public int Field => _source.Field;
             }
             """;
 

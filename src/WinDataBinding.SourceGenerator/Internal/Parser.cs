@@ -64,7 +64,7 @@ internal static class Parser
 
         var properties = binder.IsGenericType || sourceType.IsUnboundGenericType
             ? ImmutableArray<GeneratedProperty>.Empty
-            : Collect(binder, sourceType, known, options, diagnostics, location, ct).Properties;
+            : Collect(binder, sourceType, known, options, ct).Properties;
 
         // A constructor of their own replaces ours entirely. The field is still generated, so it is on
         // that constructor to fill it, and a warning says so when it does not.
@@ -76,6 +76,9 @@ internal static class Parser
                     Diagnostics.ConstructorMustSetSource,
                     LocationInfo.From(constructor.Locations.FirstOrDefault() ?? Location.None),
                     declaration.Keyword.ValueText, binder.Name));
+
+        // A hand-written GetSource is left to say what it says; generating a second one would not compile.
+        var getSource = !binder.GetMembers("GetSource").Any(m => !m.IsImplicitlyDeclared);
 
         // The factory says 'new Binder(source)', which needs a constructor shaped that way to exist.
         var takesSource = written.Any(c =>
@@ -97,6 +100,7 @@ internal static class Parser
             Accessibility(sourceType.DeclaredAccessibility),
             written.Length == 0,
             written.Length == 0 || takesSource,
+            getSource,
             HintName(ns, containingTypes, binder.Name),
             known.HasContractAnnotation,
             known.HasNotNullIfNotNull,
@@ -142,6 +146,24 @@ internal static class Parser
     };
 
     // -- traversal ------------------------------------------------------------------------------
+
+    /// <summary>
+    /// How many times one type may appear in a single chain. Two: a type that holds itself, directly or round a
+    /// longer loop, is worth flattening once more, and the copy after that would only repeat what the first two
+    /// already bound.
+    /// </summary>
+    private const int Repeats = 2;
+
+    /// <summary>How often each type appears in the chain being walked.</summary>
+    private sealed class Visited(ImmutableDictionary<INamedTypeSymbol, int> counts)
+    {
+        public static Visited Empty { get; } =
+            new(ImmutableDictionary.Create<INamedTypeSymbol, int>(SymbolEqualityComparer.Default));
+
+        public int Count(INamedTypeSymbol type) => counts.TryGetValue(type, out var count) ? count : 0;
+
+        public Visited Enter(INamedTypeSymbol type) => new(counts.SetItem(type, Count(type) + 1));
+    }
 
     /// <summary>The state carried down one branch of the object graph.</summary>
     private readonly record struct Path(
@@ -225,23 +247,23 @@ internal static class Parser
         int SiblingIndex = -1);
 
     /// <param name="outer">
-    /// Types already being traversed further up, when this binder is being flattened on behalf of one that contains it.
+    /// How often each type is already being traversed further up, when this binder is being flattened on behalf of
+    /// one that contains it.
     /// </param>
     private static FlattenedBinder Collect(
         INamedTypeSymbol binder, INamedTypeSymbol sourceType, KnownTypeSymbols known, GeneratorOptions options,
-        List<DiagnosticInfo> diagnostics, LocationInfo? location, CancellationToken ct,
-        ImmutableHashSet<INamedTypeSymbol>? outer = null)
+        CancellationToken ct, Visited? outer = null)
     {
         var candidates = new List<Candidate>();
-        var seed = outer ?? ImmutableHashSet.Create<INamedTypeSymbol>(SymbolEqualityComparer.Default);
+        var seed = outer ?? Visited.Empty;
 
-        Walk(sourceType, Path.Source, seed.Add(sourceType), known, options, candidates, diagnostics, location, ct);
+        var pruned = Walk(sourceType, Path.Source, seed.Enter(sourceType), known, options, candidates, ct);
         var fromSource = candidates.Count;
 
         // Properties the binder declares itself are flattened the same way, rooted at 'this' instead.
         // Only what comes out of them is emitted: the property is already there, so re-exposing it under its own name
         // would not compile, and a simple one has nothing to flatten at all.
-        Walk(binder, Path.This, seed.Add(binder), known, options, candidates, diagnostics, location, ct, bare: false);
+        pruned |= Walk(binder, Path.This, seed.Enter(binder), known, options, candidates, ct, bare: false);
 
         // Names are assigned only once every chain is known, first-come-first-served in declaration order.
         var names = PropertyChain.GetPaths(candidates.ConvertAll(c => c.Chain), Reserved(binder));
@@ -265,14 +287,16 @@ internal static class Parser
                 EquatableArray.Create(candidate.Remarks),
                 candidate.Description));
         }
-        return new FlattenedBinder(properties.MoveToImmutable(), fromSource);
+        return new FlattenedBinder(properties.MoveToImmutable(), fromSource, pruned);
     }
 
-    private static void Walk(
-        INamedTypeSymbol type, Path path, ImmutableHashSet<INamedTypeSymbol> visited, KnownTypeSymbols known,
-        GeneratorOptions options, List<Candidate> candidates, List<DiagnosticInfo> diagnostics,
-        LocationInfo? location, CancellationToken ct, bool bare = true)
+    /// <returns>Whether a branch below was pruned for repeating a type the chain reaching it had already been through.</returns>
+    private static bool Walk(
+        INamedTypeSymbol type, Path path, Visited visited, KnownTypeSymbols known,
+        GeneratorOptions options, List<Candidate> candidates, CancellationToken ct, bool bare = true)
     {
+        var pruned = false;
+
         foreach (var (member, memberType) in GetMembers(type))
         {
             ct.ThrowIfCancellationRequested();
@@ -349,19 +373,23 @@ internal static class Parser
                 complex.TypeKind is not (TypeKind.Class or TypeKind.Struct or TypeKind.Interface))
                 continue;
 
-            if (visited.Contains(complex))
+            // A type that holds itself, directly or round a longer loop, is flattened once more and stops there,
+            // quietly: the repeat is worth binding, and anything past it only repeats the same values under a
+            // longer name.
+            if (visited.Count(complex) >= Repeats)
             {
-                diagnostics.Add(DiagnosticInfo.Create(
-                    Diagnostics.CircularReference, location, next.Chain.ToString(), complex.Name));
+                pruned = true;
                 continue;
             }
 
             // The object itself binds too, before the members flattened out of it.
             if (self) candidates.Add(PassThrough(next, underlying, tail));
-            Walk(complex, next, visited.Add(complex), known, options, candidates, diagnostics, location, ct);
+            pruned |= Walk(complex, next, visited.Enter(complex), known, options, candidates, ct);
             AddFormatted(next, renderer, candidates);
-            AddNested(complex, next, visited, known, candidates, ct);
+            pruned |= AddNested(complex, next, visited, known, candidates, ct);
         }
+
+        return pruned;
     }
 
     /// <summary>
@@ -373,24 +401,21 @@ internal static class Parser
     /// but this is the code that writes it, so its names and types are known exactly. Only the source half is spliced
     /// in: the members the nested binder declares by hand are real members, and walking it has bound them already.
     /// </remarks>
-    private static void AddNested(
-        INamedTypeSymbol binder, Path path, ImmutableHashSet<INamedTypeSymbol> visited, KnownTypeSymbols known,
+    /// <returns>Whether flattening the nested binder pruned a branch, as <see cref="Walk"/> reports it.</returns>
+    private static bool AddNested(
+        INamedTypeSymbol binder, Path path, Visited visited, KnownTypeSymbols known,
         List<Candidate> candidates, CancellationToken ct)
     {
-        if (!known.IsLocal(binder) || !known.TryGetBinder(binder, out var source, out var optionsType)) return;
-        if (binder.IsGenericType || source.IsUnboundGenericType) return;
+        if (!known.IsLocal(binder) || !known.TryGetBinder(binder, out var source, out var optionsType)) return false;
+        if (binder.IsGenericType || source.IsUnboundGenericType) return false;
 
         if (!known.TryGetFlattened(binder, out var flattened))
         {
-            // The nested binder reports its own diagnostics when it is generated; repeating them here would only
-            // duplicate them against a second location.
-            var ignored = new List<DiagnosticInfo>();
             flattened = Collect(binder, source, known, GeneratorOptions.From(optionsType, known),
-                ignored, null, ct, visited.Add(binder));
+                ct, visited.Enter(binder));
 
-            // A branch pruned as circular was pruned because of where we came from, so that result is ours alone.
-            if (!ignored.Any(d => ReferenceEquals(d.Descriptor, Diagnostics.CircularReference)))
-                known.SetFlattened(binder, flattened);
+            // A branch pruned as a repeat was pruned because of where we came from, so that result is ours alone.
+            if (!flattened.Pruned) known.SetFlattened(binder, flattened);
         }
 
         for (var i = 0; i < flattened.FromSource; i++)
@@ -407,6 +432,8 @@ internal static class Parser
                 path.Remarks.AddRange(property.Remarks),
                 Join(Description(path.Descriptions, null), property.Description)));
         }
+
+        return flattened.Pruned;
     }
 
     /// <summary>Makes a type nullable when the chain reaching it can be.</summary>
@@ -624,6 +651,7 @@ internal static class Parser
     private static IEnumerable<string> Reserved(INamedTypeSymbol binder)
     {
         yield return "_source";
+        yield return "GetSource";
         yield return "Create";
         yield return "Equals";
         yield return "GetHashCode";

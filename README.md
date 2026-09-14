@@ -57,68 +57,69 @@ file for no benefit a reader of generated code gets. Your own doc comments still
 `[Description]`.
 
 ```csharp
-namespace Demo
+namespace Demo;
+
+[global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0-beta01")]
+partial class PersonModelBinder
 {
-    [global::System.CodeDom.Compiler.GeneratedCode("WinDataBinding.SourceGenerator", "1.0.0-beta01")]
-    partial class PersonModelBinder
+    private readonly global::Demo.Person _source;
+
+    public PersonModelBinder(global::Demo.Person source)
     {
-        private readonly global::Demo.Person _source;
-
-        public PersonModelBinder(global::Demo.Person source)
-        {
 #if NET6_0_OR_GREATER
-            global::System.ArgumentNullException.ThrowIfNull(source);
-            _source = source;
+        global::System.ArgumentNullException.ThrowIfNull(source);
+        _source = source;
 #else
-            _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
+        _source = source ?? throw new global::System.ArgumentNullException(nameof(source));
 #endif
-        }
-
-        [global::System.ComponentModel.Description("Person name")]
-        public string? Name => _source.Name;
-
-        [global::System.ComponentModel.Description("Person's address")]
-        public global::Demo.Address? Address => _source.Address;
-
-        [global::System.ComponentModel.Description("Person's address")]
-        public string? Address_Street => _source.Address?.Street;
-
-        [global::System.ComponentModel.Description("Person's address")]
-        public string? Address_City => _source.Address?.City;
-
-        [global::System.ComponentModel.Description("Person's address: Address state")]
-        public string? Address_State => _source.Address?.State;
-
-        [global::System.ComponentModel.Description("The timestamp that the person was created at")]
-        public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
-
-        [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
-        public string? CreatedAt_Formatted => _source.CreatedAt.ToString(null, null);
-
-        [global::System.ComponentModel.Description("Last login in the user's local timezone")]
-        public global::Demo.LoginInfo? LastLogin => _source.LastLogin;
-
-        [global::System.ComponentModel.Description("Last login in the user's local timezone")]
-        public int? LastLogin_Id => _source.LastLogin?.Id;
-
-        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at")]
-        public global::System.DateTimeOffset? LastLogin_Timestamp => _source.LastLogin?.Timestamp.ToDateTimeOffset();
-
-        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Utc)")]
-        public global::System.DateTime? LastLogin_Timestamp_Utc => _source.LastLogin?.Timestamp.ToDateTimeUtc();
-
-        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Local)")]
-        public global::System.DateTime? LastLogin_Timestamp_Local => _source.LastLogin?.Timestamp.ToDateTimeUnspecified();
-
-        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Offset)")]
-        public global::System.TimeSpan? LastLogin_Timestamp_Offset => _source.LastLogin?.Timestamp.Offset.ToTimeSpan();
-
-        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
-        public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
-
-        [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
-        public string? LastLogin_Timestamp_Formatted => _source.LastLogin?.Timestamp.ToString(null, null);
     }
+
+    public global::Demo.Person GetSource() => _source;
+
+    [global::System.ComponentModel.Description("Person name")]
+    public string? Name => _source.Name;
+
+    [global::System.ComponentModel.Description("Person's address")]
+    public global::Demo.Address? Address => _source.Address;
+
+    [global::System.ComponentModel.Description("Person's address")]
+    public string? Address_Street => _source.Address?.Street;
+
+    [global::System.ComponentModel.Description("Person's address")]
+    public string? Address_City => _source.Address?.City;
+
+    [global::System.ComponentModel.Description("Person's address: Address state")]
+    public string? Address_State => _source.Address?.State;
+
+    [global::System.ComponentModel.Description("The timestamp that the person was created at")]
+    public global::System.DateTime CreatedAt => _source.CreatedAt.ToDateTimeUtc();
+
+    [global::System.ComponentModel.Description("The timestamp that the person was created at (Formatted)")]
+    public string? CreatedAt_Formatted => _source.CreatedAt.ToString(null, null);
+
+    [global::System.ComponentModel.Description("Last login in the user's local timezone")]
+    public global::Demo.LoginInfo? LastLogin => _source.LastLogin;
+
+    [global::System.ComponentModel.Description("Last login in the user's local timezone")]
+    public int? LastLogin_Id => _source.LastLogin?.Id;
+
+    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at")]
+    public global::System.DateTimeOffset? LastLogin_Timestamp => _source.LastLogin?.Timestamp.ToDateTimeOffset();
+
+    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Utc)")]
+    public global::System.DateTime? LastLogin_Timestamp_Utc => _source.LastLogin?.Timestamp.ToDateTimeUtc();
+
+    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Local)")]
+    public global::System.DateTime? LastLogin_Timestamp_Local => _source.LastLogin?.Timestamp.ToDateTimeUnspecified();
+
+    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Offset)")]
+    public global::System.TimeSpan? LastLogin_Timestamp_Offset => _source.LastLogin?.Timestamp.Offset.ToTimeSpan();
+
+    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Timezone)")]
+    public string? LastLogin_Timestamp_Timezone => _source.LastLogin?.Timestamp.Zone.Id;
+
+    [global::System.ComponentModel.Description("Last login in the user's local timezone: Timestamp the login occurred at (Formatted)")]
+    public string? LastLogin_Timestamp_Formatted => _source.LastLogin?.Timestamp.ToString(null, null);
 }
 ```
 
@@ -246,7 +247,10 @@ public sealed partial class PersonModelBinder
 ```
 
 The `private readonly TSource _source` field is generated either way — it is what every generated property
-reads through — so filling it becomes your constructor's job. **`WGD006` warns when a constructor never
+reads through, and `GetSource()` hands it back, so a caller holding a binder can get at the object it wraps.
+It is a method rather than a property so that a flattened `Source` keeps its own name, and the name is
+reserved either way; write your own `GetSource` and none is generated. Filling the field is your
+constructor's job. **`WGD006` warns when a constructor never
 assigns it**, because the code compiles perfectly and then throws on the first property read:
 
 > This constructor of class 'PersonModelBinder' never assigns `_source`, so every generated property will
@@ -357,7 +361,7 @@ from the graph would have produced `_source.Home?.Created.ToDateTimeUtc()`, whic
 Those flattened members are not in the compilation the generator reads: a generator never sees its own
 output, its own earlier files included. They are known anyway, because the same logic that will write them
 runs here to work out their names and types. The nesting goes as deep as you take it, and two binders that
-point at each other terminate with `WGD001` rather than looping.
+point at each other terminate by the rule below rather than looping.
 
 Whatever the nested binder declares by hand is an ordinary member of it and binds by the usual rules, so
 `AddressBinder`'s own `bool IsPrimary` becomes `Home_IsPrimary`. A binder from a *referenced* assembly is
@@ -451,8 +455,13 @@ public string? Address_Current_City => _source.Address?.Current?.City;          
 ```
 
 So a grid can bind a whole object to a templated column, or its flattened members to plain ones, without you
-having to choose up front. A property skipped for a circular reference still gets its bare property: the
-object binds even where the graph cannot be flattened.
+having to choose up front.
+
+A type that holds itself, directly or round a longer loop, is flattened one further time and then stops:
+each type may appear twice in a chain. A `Customer` with a `Parent` of its own gives `Customer`,
+`Customer_Name`, `Customer_Parent` and `Customer_Parent_Name`, and stops before `Customer_Parent_Parent`,
+which would only repeat what those already bind. Nothing is reported for it — the chain is as deep as it
+was asked to be.
 
 #### Value types
 

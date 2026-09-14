@@ -10,7 +10,12 @@ namespace WinDataBinding.SourceGenerator.Internal;
 /// How many of <paramref name="Properties"/> came from the source object. A binder nested inside another already
 /// binds the declared half through its own members, so only this half is spliced in.
 /// </param>
-internal readonly record struct FlattenedBinder(ImmutableArray<GeneratedProperty> Properties, int FromSource);
+/// <param name="Pruned">
+/// Whether a branch was dropped for repeating a type the chain above it had already been through, which makes the
+/// result particular to the chain that asked for it rather than something to hold on to.
+/// </param>
+internal readonly record struct FlattenedBinder(
+    ImmutableArray<GeneratedProperty> Properties, int FromSource, bool Pruned);
 
 /// <summary>
 /// One generated property. When <see cref="TypePre6"/> is set the property is emitted twice, 
@@ -39,6 +44,7 @@ internal sealed record BinderModel(
     string CtorAccessibility,
     bool EmitConstructor,
     bool EmitFactory,
+    bool EmitGetSource,
     string HintName,
     bool ContractAnnotation,
     bool NotNullIfNotNull,

@@ -253,14 +253,15 @@ public class BinderPropertyTests
     }
 
     [Fact]
-    public void Reports_a_declared_property_that_points_back_at_the_binder()
+    public void Flattens_one_repeat_of_a_declared_property_that_points_back_at_the_binder()
     {
         var source = Wrap(
             "public class Model { public int Id { get; set; } }",
             "    public ModelBinder? Parent { get; set; }");
 
-        var result = TestHarness.Run(source);
+        var result = TestHarness.AssertCompiles(source);
 
-        result.Should().HaveDiagnostic("WGD001", Microsoft.CodeAnalysis.DiagnosticSeverity.Warning);
+        result.Should().HaveNoDiagnostics();
+        result.Source.Should().Contain("public int? Parent_Id => this.Parent?.Id;");
     }
 }
