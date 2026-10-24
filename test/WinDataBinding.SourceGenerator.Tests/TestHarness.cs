@@ -1,10 +1,8 @@
 using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using Basic.Reference.Assemblies;
-using FluentAssertions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using WinDataBinding;
 
 namespace WinDataBinding.SourceGenerator.Tests;
 

@@ -1,5 +1,3 @@
-using WinDataBinding;
-
 namespace WinDataBinding.SourceGenerator.Tests;
 
 public class AttributeTests
