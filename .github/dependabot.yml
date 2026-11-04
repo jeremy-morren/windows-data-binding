@@ -16,14 +16,6 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    groups:
-      # One pull request for the test stack rather than one for each of its parts
-      test:
-        patterns:
-          - "xunit*"
-          - "FluentAssertions"
-          - "Microsoft.Testing.*"
-          - "Basic.Reference.Assemblies*"
 
   # The workflow pins major versions, which move about once a year
   - package-ecosystem: "github-actions"
