@@ -12,8 +12,8 @@
 
   <ItemGroup>
     <PackageReference Include="FluentAssertions" Version="7.2.2" />
-    <PackageReference Include="xunit.v3" Version="4.0.2" />
-    <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.2" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
+    <PackageReference Include="xunit.v3.mtp-v2" Version="4.0.3" />
 
     <!-- The TRX report is an extension, not part of the platform; CI publishes test results from it. -->
     <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" Version="2.5.2" />
